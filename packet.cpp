@@ -84,7 +84,7 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char>& data)
     return packets;
 }
 
-void Packet::print()
+void Packet::print() const
 {
     std::cout << "Type: " << type << "\n";
     std::cout << "SeqNum: " << seqn << "\n";

@@ -26,6 +26,9 @@ public:
     static Packet create_packet_cmd(const std::string& command);
     static std::vector<Packet> create_packet_data(const std::vector<char>& data);
 
+    static std::vector<Packet> create_packets_from_file(const std::string& file_path);
+    void print() const;
+
     uint16_t get_type() const;
     uint16_t get_seqn() const;
     uint32_t get_total_size() const;
@@ -38,7 +41,7 @@ public:
     void set_length(uint16_t len);
     void set_payload(const std::vector<char>& pl);
 
-    void print();
+
 };
 
 #endif // PACKET_H
