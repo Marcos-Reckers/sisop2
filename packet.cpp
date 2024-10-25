@@ -2,6 +2,7 @@
 #include <cstring>  // Para memcpy
 #include <cmath>    // Para ceil
 #include <algorithm>
+#include <iostream>
 
 Packet::Packet() : type(0), seqn(0), total_size(0), length(0), payload() {}
 
@@ -81,6 +82,15 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char>& data)
     }
 
     return packets;
+}
+
+void Packet::print()
+{
+    std::cout << "Type: " << type << "\n";
+    std::cout << "SeqNum: " << seqn << "\n";
+    std::cout << "Total size: " << total_size << "\n";
+    std::cout << "Length: " << length << "\n";
+    std::cout << "Payload: " << std::string(payload.begin(), payload.end()) << "\n";
 }
 
 uint16_t Packet::get_type() const { return type; }
