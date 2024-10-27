@@ -1,5 +1,6 @@
 #include "packet.h"
 #include <cstring>  // Para memcpy
+#include <fstream>  // Para ifstream
 #include <cmath>    // Para ceil
 #include <algorithm>
 #include <iostream>
@@ -13,7 +14,7 @@ std::vector<uint8_t> Packet::packet_to_bytes(const Packet& pkt)
 {
     size_t totalSize = sizeof(pkt.type) + sizeof(pkt.seqn) + sizeof(pkt.total_size) +
                        sizeof(pkt.length) + pkt.length;
-
+                       
     std::vector<uint8_t> bytes(totalSize);
     size_t index = 0;
 
@@ -81,6 +82,23 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char>& data)
                              data.begin() + i * MAX_PAYLOAD_SIZE + payload_size));
     }
 
+    return packets;
+}
+
+std::vector<Packet> Packet::create_packets_from_file(const std::string& file_path) {
+    std::ifstream infile(file_path, std::ios::binary);
+    std::vector<Packet> packets;
+
+    if (!infile.is_open()) {
+        std::cerr << "Não foi possível abrir o arquivo: " << file_path << "\n";
+        return packets;
+    }
+
+    std::vector<char> file_data((std::istreambuf_iterator<char>(infile)), std::istreambuf_iterator<char>());
+
+    packets = create_packet_data(file_data);
+
+    infile.close();
     return packets;
 }
 

@@ -17,6 +17,7 @@ private:
     std::vector<char> payload;     // Dados do pacote
 
 public:
+
     Packet();
     Packet(uint16_t type, uint16_t seqn, uint32_t total_size, uint16_t length, const std::vector<char>& payload);
     
@@ -40,8 +41,6 @@ public:
     void set_total_size(uint32_t ts);
     void set_length(uint16_t len);
     void set_payload(const std::vector<char>& pl);
-
-
 };
 
 #endif // PACKET_H
