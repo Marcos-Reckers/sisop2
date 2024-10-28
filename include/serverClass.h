@@ -37,9 +37,16 @@ public:
     socklen_t getAddrLen() const;
     std::vector<std::thread>& getClientThreads();
 
+    // Método para lidar com as requisições de um cliente
     void handleRequest(int client_fd);
 
+    // Método para receber um arquivo
     void receive_file(int client_fd);
+    
+    // Método para deletar um arquivo
+    void delete_file(int client_fd);
+
+    // Método para encerrar a conexão com um cliente
     void close_connection(int client_fd);
 
 

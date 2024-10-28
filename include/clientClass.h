@@ -25,6 +25,8 @@ class Client
         void send_cmd(string cmd);
         void send_file(string file_path);
 
+        void wait_fin();
+
         //upload
         //download
         //delete

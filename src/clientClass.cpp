@@ -9,6 +9,8 @@
 Client::Client(string username, string server_ip_address, string server_port) : 
 username(username), server_ip_address(server_ip_address), server_port(server_port) {}
 
+void Client::set_sock(uint16_t sock) { sock = sock; }
+
 uint16_t Client::connect_to_server() 
 {
     struct sockaddr_in serv_addr;
@@ -101,4 +103,3 @@ void Client::send_file(string file_path)
     std::cout << "Arquivo enviado com sucesso." << std::endl;
 }
 
-void Client::set_sock(uint16_t sock) { sock = sock; }

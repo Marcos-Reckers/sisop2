@@ -27,6 +27,8 @@ public:
     static Packet create_packet_cmd(const std::string& command);
     static std::vector<Packet> create_packet_data(const std::vector<char>& data);
 
+    static ssize_t packet_base_size();
+
     static std::vector<Packet> create_packets_from_file(const std::string& file_path);
     void print() const;
 

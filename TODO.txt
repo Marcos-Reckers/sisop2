@@ -1,0 +1,4 @@
+tratar erros: mandar um arquivo que n existe 
+tratar client ID começa em 4 e mesmo usuario gera clients diferentes
+ao enviar comando exit enviar resposta para cliente para fechar conexao e não esperar um  payload
+

@@ -34,7 +34,7 @@ CLIENT_NAME = $(BUILD_DIR)/myClient
 ########################################
 .PHONY: all release debug clean build server client
 
-all: release
+all: clean release
 
 release: CXXFLAGS += $(_CXXFLAGS_RELEASE)
 release: build

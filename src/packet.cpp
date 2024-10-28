@@ -111,6 +111,8 @@ void Packet::print() const
     std::cout << "Payload: " << std::string(payload.begin(), payload.end()) << "\n";
 }
 
+ssize_t Packet::packet_base_size() { return sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint16_t); }
+
 uint16_t Packet::get_type() const { return type; }
 uint16_t Packet::get_seqn() const { return seqn; }
 uint32_t Packet::get_total_size() const { return total_size; }
