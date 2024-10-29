@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 
+
 Packet::Packet() : type(0), seqn(0), total_size(0), length(0), payload() {}
 
 Packet::Packet(uint16_t type, uint16_t seqn, uint32_t total_size, uint16_t length, const std::vector<char>& payload)
@@ -85,6 +86,19 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char>& data)
     return packets;
 }
 
+// std::vector<Packet> Packet::create_packets_from_stat(const std::vector<struct stat>& file_stats) {
+//     std::vector<Packet> packets;
+
+//     for (const auto& file_stat : file_stats) {
+//         int payload_size = sizeof(file_stat);  // Define o tamanho da carga útil
+
+//         packets.emplace_back(3, file_stat, payload_size, std::vector<char>(reinterpret_cast<const char*>(&file_stat), reinterpret_cast<const char*>(&file_stat) + payload_size));
+//     }
+
+//     return packets;
+// }
+
+
 std::vector<Packet> Packet::create_packets_from_file(const std::string& file_path) {
     std::ifstream infile(file_path, std::ios::binary);
     std::vector<Packet> packets;
@@ -101,6 +115,8 @@ std::vector<Packet> Packet::create_packets_from_file(const std::string& file_pat
     infile.close();
     return packets;
 }
+
+
 
 void Packet::print() const
 {

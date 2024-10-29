@@ -2,3 +2,17 @@ tratar erros: mandar um arquivo que n existe
 tratar client ID começa em 4 e mesmo usuario gera clients diferentes
 ao enviar comando exit enviar resposta para cliente para fechar conexao e não esperar um  payload
 
+send folder: compacta no src e descompacta no dst e vice versa
+
+upload -> ok
+download -> ok
+delete -> ok
+list_server
+list_client
+get_sync_dir
+exit -> ok
+
+
+para fazer o list:
+    get_info(id)-> struct(name, size, macs)
+    make_packet(get_info(id))-> vector packet

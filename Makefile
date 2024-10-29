@@ -34,7 +34,7 @@ CLIENT_NAME = $(BUILD_DIR)/myClient
 ########################################
 .PHONY: all release debug clean build server client
 
-all: clean release
+all: release
 
 release: CXXFLAGS += $(_CXXFLAGS_RELEASE)
 release: build
@@ -58,4 +58,4 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 clean:
-	rm -f $(BUILD_DIR)/*
+	rm -rf $(BUILD_DIR)/*

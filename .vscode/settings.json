@@ -64,6 +64,7 @@
     "variant": "cpp",
     "format": "cpp",
     "__nullptr": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "map": "cpp"
   }
 }

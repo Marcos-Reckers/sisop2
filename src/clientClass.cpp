@@ -3,20 +3,22 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <cstring>
+#include <fstream>
 
-#include <filesystem>  
+#include <filesystem>
 
-Client::Client(string username, string server_ip_address, string server_port) : 
-username(username), server_ip_address(server_ip_address), server_port(server_port) {}
+Client::Client(string username, string server_ip_address, string server_port) : username(username), server_ip_address(server_ip_address), server_port(server_port) {}
 
-void Client::set_sock(uint16_t sock) { sock = sock; }
+void Client::set_sock(int sock) { sock = sock; }
 
-uint16_t Client::connect_to_server() 
+uint16_t Client::connect_to_server()
 {
     struct sockaddr_in serv_addr;
 
     // Cria o socket
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
         cout << "Erro ao criar socket" << endl;
         return -1;
     }
@@ -25,22 +27,25 @@ uint16_t Client::connect_to_server()
     serv_addr.sin_port = htons(atoi(server_port.c_str()));
 
     // Converte o endereço IP para binário
-    if (inet_pton(AF_INET, server_ip_address.c_str(), &serv_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, server_ip_address.c_str(), &serv_addr.sin_addr) <= 0)
+    {
         cout << "Endereço inválido ou não suportado" << endl;
         return -2;
     }
 
     // Conecta ao servidor -> Faz o handshake
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
         cout << "Falha na conexão" << endl;
         close(sock);
         return -3;
     }
 
+    send(sock, username.c_str(), username.size(), 0);
+
     set_sock(sock);
 
     return sock;
-
 }
 
 void Client::send_cmd(string cmd)
@@ -49,8 +54,9 @@ void Client::send_cmd(string cmd)
     Packet packet = Packet::create_packet_cmd(cmd);
     std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
     ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
-    
-    if (sent_bytes < 0) {
+
+    if (sent_bytes < 0)
+    {
         std::cerr << "Erro ao enviar comando como pacote." << std::endl;
         return;
     }
@@ -60,39 +66,32 @@ void Client::send_cmd(string cmd)
 
 void Client::send_file(string file_path)
 {
-    
-    string file_name = std::filesystem::path(file_path).filename().string();
-    std::vector<uint8_t> file_name_bytes(file_name.begin(), file_name.end());
-    file_name_bytes.push_back('\0');
-
-    ssize_t sent_bytes = send(sock, file_name_bytes.data(), file_name_bytes.size(), 0);
-    if (sent_bytes < 0) {
-        std::cerr << "Erro ao enviar nome do arquivo." << std::endl;
-        return;
-    }
-    std::cout << "Nome do arquivo enviado: " << file_name << std::endl;
-    
+    send_file_name(file_path);
     uint32_t file_size = std::filesystem::file_size(file_path);
     uint32_t file_size_network_order = htonl(file_size);
-    sent_bytes = send(sock, &file_size_network_order, sizeof(file_size_network_order), 0);
-    if (sent_bytes < 0) {
+    ssize_t sent_bytes = send(sock, &file_size_network_order, sizeof(file_size_network_order), 0);
+    if (sent_bytes < 0)
+    {
         std::cerr << "Erro ao enviar o tamanho do arquivo." << std::endl;
         return;
     }
     std::cout << "Tamanho do arquivo: " << file_size << " bytes." << std::endl;
-    
+
     std::vector<Packet> packets = Packet::create_packets_from_file(file_path);
 
-    if (packets.empty()){
+    if (packets.empty())
+    {
         cout << "Arquivo vazio." << endl;
         return;
     }
 
-    for (Packet packet : packets) {
+    for (Packet packet : packets)
+    {
         std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
 
         ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
-        if (sent_bytes < 0) {
+        if (sent_bytes < 0)
+        {
             cout << "Erro ao enviar pacote." << endl;
             return;
         }
@@ -101,5 +100,131 @@ void Client::send_file(string file_path)
     }
 
     std::cout << "Arquivo enviado com sucesso." << std::endl;
+}
+
+void Client::create_download_dir(){
+    if (!std::filesystem::exists("downloads")) {
+    std::filesystem::create_directory("downloads"); 
+    }
+}
+
+
+void Client::receive_file()
+{
+    char file_name_buffer[256] = {0};
+    ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
+    create_download_dir();
+    std::string save_path = "downloads/" + std::string(file_name_buffer);
+    if (received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
+        return;
+    }
+    std::string file_name(file_name_buffer, received_bytes);
+    std::cout << "Nome do arquivo recebido: " << file_name << std::endl;
+
+    uint32_t file_size_network_order;
+    received_bytes = recv(sock, &file_size_network_order, sizeof(file_size_network_order), 0);
+    if (received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o tamanho do arquivo." << std::endl;
+        return;
+    }
+    uint32_t file_size = ntohl(file_size_network_order);
+    std::cout << "Tamanho do arquivo recebido: " << file_size << " bytes" << std::endl;
+
+    std::ofstream outfile(save_path, std::ios::binary);
+    if (!outfile.is_open())
+    {
+        std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
+        return;
+    }
+
+    uint32_t total_received_bytes = 0;
+    while (total_received_bytes < file_size)
+    {
+        ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+
+        std::vector<uint8_t> packet_buffer(total_size);
+
+        received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+        if (received_bytes <= 0)
+        {
+            std::cerr << "Erro ao receber o pacote:" << std::endl;
+            break;
+        }
+        std::cout << "Bytes recebidos: " << received_bytes << std::endl;
+
+        Packet packet = Packet::bytes_to_packet(packet_buffer);
+        outfile.write(packet.get_payload().data(), packet.get_length());
+
+        total_received_bytes += packet.get_length();
+
+        // Debug
+        std::cout << "Pacote " << packet.get_seqn() << " recebido com payload de tamanho: " << packet.get_length() << std::endl;
+    }
+
+    outfile.close();
+
+    if (total_received_bytes == file_size)
+    {
+        std::cout << "Arquivo recebido com sucesso." << std::endl;
+    }
+    else
+    {
+        std::cerr << "Transferência de arquivo incompleta. Esperando " << file_size << " bytes mas recebeu " << total_received_bytes << " bytes." << std::endl;
+    }
+}
+
+// void Client::receive_file_list()
+// {
+//     uint32_t total_received_bytes = 0;
+//     while (total_received_bytes < list_size)
+//     {
+//         ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+
+//         std::vector<uint8_t> packet_buffer(total_size);
+
+//         received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+//         if (received_bytes <= 0)
+//         {
+//             std::cerr << "Erro ao receber o pacote:" << std::endl;
+//             break;
+//         }
+//         std::cout << "Bytes recebidos: " << received_bytes << std::endl;
+
+//         Packet packet = Packet::bytes_to_packet(packet_buffer);
+        
+
+//         total_received_bytes += packet.get_length();
+
+//         // Debug
+//         std::cout << "Pacote " << packet.get_seqn() << " recebido com payload de tamanho: " << packet.get_length() << std::endl;
+//     }
+// }
+
+void Client::send_file_name(string file_path)
+{
+    string file_name = std::filesystem::path(file_path).filename().string();
+    std::vector<uint8_t> file_name_bytes(file_name.begin(), file_name.end());
+    file_name_bytes.push_back('\0');
+
+    ssize_t sent_bytes = send(sock, file_name_bytes.data(), file_name_bytes.size(), 0);
+    if (sent_bytes < 0)
+    {
+        std::cerr << "Erro ao enviar nome do arquivo." << std::endl;
+        return;
+    }
+    std::cout << "Nome do arquivo enviado: " << file_name << std::endl;
+}
+
+void Client::end_connection()
+{   
+    char buffer[256];
+    recv(sock, buffer, 256, 0);
+    if(strcmp(buffer, "exit") == 0)
+    {
+        close(sock);
+    }
 }
 
