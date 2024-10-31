@@ -1,11 +1,27 @@
 #include "clientClass.h"
 #include <iostream>
 #include <unistd.h>
+#include <netdb.h>
 
 int main(int argc, char const *argv[])
 {
+    if (argc < 4)
+    {
+        std::cerr << "Uso: " << argv[0] << "<username> <hostname> <port>" << std::endl;
+        return 1;
+    }
+    
     std::vector<std::string> args{argv, argv + argc};
-    Client client(args[1], args[2], args[3]);
+
+    struct hostent *server;
+
+    server = gethostbyname(argv[2]);
+    if (server == NULL) {
+        std::cerr << "ERROR, no such host" << std::endl;
+        exit(0);
+    }
+
+    Client client(args[1], server, args[3]);
 
     int sock = client.connect_to_server();
     if (sock < 0)
@@ -37,11 +53,11 @@ int main(int argc, char const *argv[])
 
         if (cmd.rfind("delete", 0) == 0)
         {
-            std::string file_path = cmd.substr(7);
-            if (!file_path.empty())
+            std::string file_name = cmd.substr(7);
+            if (!file_name.empty())
             {
                 client.send_cmd("delete");
-                client.send_file_name(file_path);
+                client.send_file_name(file_name);
             }
             else
             {
@@ -51,11 +67,11 @@ int main(int argc, char const *argv[])
 
         if (cmd.rfind("download", 0) == 0)
         {
-            std::string file_path = cmd.substr(9);
-            if (!file_path.empty())
+            std::string file_name = cmd.substr(9);
+            if (!file_name.empty())
             {
                 client.send_cmd("download");
-                client.send_file_name(file_path);
+                client.send_file_name(file_name);
                 client.receive_file();
             }
             else
@@ -67,7 +83,6 @@ int main(int argc, char const *argv[])
         if (cmd.rfind("list_server", 0) == 0)
         {
             client.send_cmd("list_server");
-            client.recive_file_list();
         }
 
         if (cmd.rfind("list_client", 0) == 0)

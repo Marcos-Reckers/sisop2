@@ -5,17 +5,21 @@
 #include <unistd.h>
 #include <cstring>
 #include <fstream>
+#include <iostream>
+#include <netdb.h>
 
+
+#include "packet.h"
+#include "fileInfo.h"
 #include <filesystem>
 
-Client::Client(string username, string server_ip_address, string server_port) : username(username), server_ip_address(server_ip_address), server_port(server_port) {}
+Client::Client(string username, struct hostent* server, string server_port) : username(username), server(server), server_port(server_port) {}
 
 void Client::set_sock(int sock) { sock = sock; }
 
 uint16_t Client::connect_to_server()
 {
     struct sockaddr_in serv_addr;
-
     // Cria o socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -25,13 +29,8 @@ uint16_t Client::connect_to_server()
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(atoi(server_port.c_str()));
-
-    // Converte o endereço IP para binário
-    if (inet_pton(AF_INET, server_ip_address.c_str(), &serv_addr.sin_addr) <= 0)
-    {
-        cout << "Endereço inválido ou não suportado" << endl;
-        return -2;
-    }
+    serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+	bzero(&(serv_addr.sin_zero), 8);
 
     // Conecta ao servidor -> Faz o handshake
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
@@ -102,18 +101,34 @@ void Client::send_file(string file_path)
     std::cout << "Arquivo enviado com sucesso." << std::endl;
 }
 
-void Client::create_download_dir(){
+/* void Client::create_download_dir(){
     if (!std::filesystem::exists("downloads")) {
     std::filesystem::create_directory("downloads"); 
     }
+} */
+
+void Client::create_dir(string dir_name) {
+    if (!std::filesystem::exists(dir_name)) {
+        std::filesystem::create_directory(dir_name);
+    }
 }
+
+void Client::get_sync_dir()
+{
+    create_dir("sync_dir");
+    send_cmd("get_sync_dir");
+}
+
 
 
 void Client::receive_file()
 {
     char file_name_buffer[256] = {0};
     ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
-    create_download_dir();
+    
+    //create_download_dir();
+    create_dir("downloads");
+
     std::string save_path = "downloads/" + std::string(file_name_buffer);
     if (received_bytes <= 0)
     {
@@ -140,7 +155,29 @@ void Client::receive_file()
         return;
     }
 
-    uint32_t total_received_bytes = 0;
+    // std::cout << "Recebendo informações do arquivo..." << std::endl;
+
+    // FileInfo file_info = receive_file_info();
+
+    // string file_name = file_info.get_file_name();
+    // std::cout << "Nome do arquivo recebido: " << file_name << std::endl;
+
+    // int file_size = file_info.get_file_size();
+    // std::cout << "Tamanho do arquivo recebido: " << file_size << " bytes" << std::endl;
+    
+    // create_download_dir();
+    // std::string save_path = "downloads/" + file_name;
+
+    // std::ofstream outfile(save_path, std::ios::binary);
+
+    // if(!outfile.is_open())
+    // {
+    //     std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
+    //     return;
+    // }
+
+    received_bytes = 0;
+    int total_received_bytes = 0;
     while (total_received_bytes < file_size)
     {
         ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
@@ -160,7 +197,6 @@ void Client::receive_file()
 
         total_received_bytes += packet.get_length();
 
-        // Debug
         std::cout << "Pacote " << packet.get_seqn() << " recebido com payload de tamanho: " << packet.get_length() << std::endl;
     }
 
@@ -176,32 +212,23 @@ void Client::receive_file()
     }
 }
 
-// void Client::receive_file_list()
-// {
-//     uint32_t total_received_bytes = 0;
-//     while (total_received_bytes < list_size)
-//     {
-//         ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+FileInfo Client::receive_file_info()
+{
 
-//         std::vector<uint8_t> packet_buffer(total_size);
+    std::vector<uint8_t> packet_buffer(Packet::packet_base_size());
+    ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+    if (received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o pacote:" << std::endl;
+        return FileInfo();
+    }
+    
+    Packet packet = Packet::bytes_to_packet(packet_buffer);
+    packet.print();
 
-//         received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
-//         if (received_bytes <= 0)
-//         {
-//             std::cerr << "Erro ao receber o pacote:" << std::endl;
-//             break;
-//         }
-//         std::cout << "Bytes recebidos: " << received_bytes << std::endl;
-
-//         Packet packet = Packet::bytes_to_packet(packet_buffer);
-        
-
-//         total_received_bytes += packet.get_length();
-
-//         // Debug
-//         std::cout << "Pacote " << packet.get_seqn() << " recebido com payload de tamanho: " << packet.get_length() << std::endl;
-//     }
-// }
+    FileInfo file_info = Packet::packet_to_info(packet);
+    return file_info;
+}
 
 void Client::send_file_name(string file_path)
 {

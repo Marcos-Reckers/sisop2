@@ -42,18 +42,19 @@ public:
     void receive_file(int client_sock);
 
     void send_file(int client_sock);
+
+
     
     // Método para deletar um arquivo
     void delete_file(int client_sock);
 
-    //void list_files_server(int client_sock);
-
     // Método para encerrar a conexão com um cliente
     void close_connection(int client_sock);
     void create_client_dir(std::string username);
+    void get_sync_dir(int client_sock);
 
-    //
     void send_package_info(int client_sock, std::string file_path);
+    void send_file_info(int client_sock, std::string file_path);
 
     // Getters
     int getServerFd() const;
@@ -62,9 +63,6 @@ public:
     std::vector<std::thread>& getClientThreads();
     std::map<int, std::string>& getClients();
     std::string getUsername(int client_sock);
-
-    
-
 
 };
 

@@ -11,14 +11,14 @@ class Client
 {
     private:
         string username;
-        string server_ip_address;
+        struct hostent* server;
         string server_port;
 
         int sock;
 
     public:
 
-        Client(string username, string server_ip_address, string server_port);
+        Client(string username, struct hostent* server, string server_port);
 
         uint16_t connect_to_server();
 
@@ -28,9 +28,11 @@ class Client
         void send_file(string file_path);
         void send_file_name(string file_path);
         void receive_file();
-        //void receive_file_list();
+        FileInfo receive_file_info();
 
         void end_connection();
+        void create_dir(string dir_name);
+        void get_sync_dir();
 
 
         //download

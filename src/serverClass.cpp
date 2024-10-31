@@ -14,6 +14,7 @@
 
 #include "serverClass.h"
 #include "packet.h"
+#include "fileInfo.h"
 
 // Construtor da classe que recebe a porta como argumento
 Server::Server(int port) : server_fd(-1), port(port)
@@ -30,6 +31,9 @@ bool Server::start()
         std::cerr << "Erro ao criar o socket." << std::endl;
         return false;
     }
+
+    
+
 
     // Configuração do endereço do servidor
     server_addr.sin_family = AF_INET;
@@ -83,6 +87,7 @@ void Server::acceptClients()
             addClient(client_fd, username);
             std::string username_str(username);
             std::cout << "Conexão aceita de: " << username << std::endl;
+            // get_sync_dir(client_fd);
             create_client_dir(username);
         }
 
@@ -91,11 +96,16 @@ void Server::acceptClients()
     }
 }
 
+void Server::get_sync_dir(int client_fd)
+{
+    create_client_dir(getUsername(client_fd));
+}
+
 void Server::create_client_dir(std::string username)
 {
-    if (!std::filesystem::exists("users/" + username))
+    if (!std::filesystem::exists("users/sync_dir_" + username))
     {
-        std::filesystem::create_directory("users/" + username);
+        std::filesystem::create_directory("users/sync_dir_" + username);
     }
 }
 
@@ -171,7 +181,7 @@ void Server::handleRequest(int client_sock)
             }
             if (cmd.substr(0, 11) == "list_server")
             {
-                list_files_server(client_sock);
+                //list_files_server(client_sock);
             }
             if (cmd.substr(0, 11) == "list_client")
             {
@@ -223,6 +233,7 @@ void Server::receive_file(int client_sock)
         std::cerr << "Erro ao receber o tamanho do arquivo." << std::endl;
         return;
     }
+
     uint32_t file_size = ntohl(file_size_network_order);
     std::cout << "Tamanho do arquivo recebido: " << file_size << " bytes" << std::endl;
 
@@ -320,10 +331,11 @@ void Server::send_file(int client_sock)
     std::vector<uint8_t> file_name_bytes(file_name.begin(), file_name.end());
     file_name_bytes.push_back('\0');
 
-    send_package_info(client_sock, file_name, save_path);
+    send_package_info(client_sock, save_path);
 
-        std::vector<Packet>
-            packets = Packet::create_packets_from_file(save_path);
+    //send_file_info(client_sock, save_path);
+
+    std::vector<Packet> packets = Packet::create_packets_from_file(save_path);
 
     if (packets.empty())
     {
@@ -349,69 +361,9 @@ void Server::send_file(int client_sock)
     std::cout << "Arquivo enviado com sucesso." << std::endl;
 }
 
-// void Server::list_files_server(int client_sock)
-// {
-//     char file_name_buffer[256] = {0};
-//     std::string username = getUsername(client_sock);
-//     std::string client_dir = "users/" + username + "/";
-
-//     DIR *dir = opendir(client_dir.c_str());
-//     if (!dir)
-//     {
-//         std::cerr << "Erro ao abrir o diretório." << std::endl;
-//         return;
-//     }
-
-//     struct dirent *entry;
-//     struct stat file_stat;
-
-//     std::vector<struct stat> file_stats;
-
-//     while ((entry = readdir(dir)) != NULL)
-//     {
-//         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-//             continue;
-
-//         std::string file_path = client_dir + entry->d_name;
-
-//         if (stat(file_path.c_str(), &file_stat) == -1)
-//         {
-//             std::cerr << "Erro ao obter informações do arquivo: " << entry->d_name << std::endl;
-//             continue;
-//         }
-
-//         file_stats.push_back(file_stat);
-//     }
-
-//     static std::vector<Packet> packets = Packet::create_packets_from_stat(file_stats);
-
-//     for (Packet packet : packets)
-//     {
-//         std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-//         if (send(client_sock, packet_bytes.data(), packet_bytes.size(), 0) == -1)
-//         {
-//             std::cerr << "Erro ao enviar o pacote stat." << std::endl;
-//             break;
-//         }
-//     }
-
-//     closedir(dir);
-
-// }
-
 void Server::close_connection(int client_sock)
 {
     send(client_sock, "exit", 4, 0);
-}
-
-std::string Server::getUsername(int client_sock)
-{
-    return clients[client_sock];
-}
-
-std::map<int, std::string> &Server::getClients()
-{
-    return clients;
 }
 
 void Server::send_package_info(int client_sock, std::string file_path)
@@ -439,3 +391,34 @@ void Server::send_package_info(int client_sock, std::string file_path)
     }
     std::cout << "Tamanho do arquivo: " << file_size << " bytes." << std::endl;
 }
+
+void Server::send_file_info(int client_sock, std::string file_path){
+
+    FileInfo file_info;
+    file_info.retrieve_info_from_file(file_path);
+    file_info.print();
+
+    Packet packet;
+    packet = packet.create_packet_info(file_info);
+    packet.print();
+
+    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
+    ssize_t sent_bytes = send(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+
+    if (sent_bytes < 0)
+    {
+        std::cerr << "Erro ao enviar informações do arquivo." << std::endl;
+    }
+}
+
+std::string Server::getUsername(int client_sock)
+{
+    return clients[client_sock];
+}
+
+std::map<int, std::string> &Server::getClients()
+{
+    return clients;
+}
+
+

@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <string>
-#include <sys/stat.h>
+#include "fileInfo.h"
 
 #define MAX_PAYLOAD_SIZE 4096
 
@@ -27,12 +27,14 @@ public:
 
     static Packet create_packet_cmd(const std::string& command);
     static std::vector<Packet> create_packet_data(const std::vector<char>& data);
-    
 
+    static Packet create_packet_info(const FileInfo& file_info);
+
+    static FileInfo packet_to_info(const Packet& pkt);
+    
     static ssize_t packet_base_size();
 
     static std::vector<Packet> create_packets_from_file(const std::string& file_path);
-    //static std::vector<Packet> create_packets_from_stat(const std::vector<struct stat>& file_stats);
 
     void print() const;
 
@@ -47,6 +49,7 @@ public:
     void set_total_size(uint32_t ts);
     void set_length(uint16_t len);
     void set_payload(const std::vector<char>& pl);
+    std::vector<char> info_to_bytes(const FileInfo& file_info);
 };
 
 #endif // PACKET_H

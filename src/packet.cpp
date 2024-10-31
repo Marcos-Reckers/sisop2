@@ -1,9 +1,11 @@
 #include "packet.h"
+#include "fileInfo.h"
 #include <cstring>  // Para memcpy
 #include <fstream>  // Para ifstream
 #include <cmath>    // Para ceil
 #include <algorithm>
 #include <iostream>
+#include <sstream>  // Para istringstream
 
 
 Packet::Packet() : type(0), seqn(0), total_size(0), length(0), payload() {}
@@ -30,11 +32,11 @@ std::vector<uint8_t> Packet::packet_to_bytes(const Packet& pkt)
 
     std::memcpy(&bytes[index], &pkt.length, sizeof(pkt.length));
     index += sizeof(pkt.length);
-
+   
     if (!pkt.payload.empty() && pkt.length > 0)
     {
         std::memcpy(&bytes[index], pkt.payload.data(), pkt.length);
-    }
+    } 
 
     return bytes;
 }
@@ -86,18 +88,32 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char>& data)
     return packets;
 }
 
-// std::vector<Packet> Packet::create_packets_from_stat(const std::vector<struct stat>& file_stats) {
-//     std::vector<Packet> packets;
+Packet Packet::create_packet_info(const FileInfo& file_info)
+{
+    Packet pkt;
 
-//     for (const auto& file_stat : file_stats) {
-//         int payload_size = sizeof(file_stat);  // Define o tamanho da carga útil
+    pkt.set_type(3);
+    pkt.set_seqn(0);
+    pkt.set_total_size(1);
+    pkt.set_length(sizeof(FileInfo));
 
-//         packets.emplace_back(3, file_stat, payload_size, std::vector<char>(reinterpret_cast<const char*>(&file_stat), reinterpret_cast<const char*>(&file_stat) + payload_size));
-//     }
+    std::vector<char> payload = std::vector<char>(reinterpret_cast<const char*>(&file_info), 
+                                                  reinterpret_cast<const char*>(&file_info) + sizeof(FileInfo));
 
-//     return packets;
-// }
+    pkt.set_payload(payload);
 
+    pkt.print();
+
+    return pkt;
+}
+
+FileInfo Packet::packet_to_info(const Packet& pkt)
+{
+    FileInfo file_info;
+    std::istringstream iss(std::string(pkt.payload.begin(), pkt.payload.end()));
+    iss.read(reinterpret_cast<char*>(&file_info), sizeof(FileInfo));
+    return file_info;
+}
 
 std::vector<Packet> Packet::create_packets_from_file(const std::string& file_path) {
     std::ifstream infile(file_path, std::ios::binary);
@@ -115,8 +131,6 @@ std::vector<Packet> Packet::create_packets_from_file(const std::string& file_pat
     infile.close();
     return packets;
 }
-
-
 
 void Packet::print() const
 {

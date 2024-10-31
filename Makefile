@@ -8,7 +8,7 @@ INCLUDE_DIR = include
 ########################################
 #   ARQUIVOS
 ########################################
-SHARED_SRC = $(SRC_DIR)/packet.cpp
+SHARED_SRC = $(SRC_DIR)/packet.cpp $(SRC_DIR)/fileInfo.cpp
 SERVER_SRC = $(SRC_DIR)/mainServer.cpp $(SRC_DIR)/serverClass.cpp $(SHARED_SRC)
 CLIENT_SRC = $(SRC_DIR)/clientClass.cpp $(SRC_DIR)/mainClient.cpp $(SHARED_SRC)
 SERVER_OBJ = $(patsubst $(SRC_DIR)/%, $(BUILD_DIR)/%, $(SERVER_SRC:.cpp=.o))
