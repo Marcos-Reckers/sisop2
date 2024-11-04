@@ -32,9 +32,6 @@ bool Server::start()
         return false;
     }
 
-    
-
-
     // Configuração do endereço do servidor
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY; // Escuta em qualquer interface
@@ -181,7 +178,7 @@ void Server::handleRequest(int client_sock)
             }
             if (cmd.substr(0, 11) == "list_server")
             {
-                //list_files_server(client_sock);
+                // list_files_server(client_sock);
             }
             if (cmd.substr(0, 11) == "list_client")
             {
@@ -217,7 +214,7 @@ void Server::receive_file(int client_sock)
     char file_name_buffer[256] = {0};
     ssize_t received_bytes = recv(client_sock, file_name_buffer, sizeof(file_name_buffer), 0);
     std::string username = getUsername(client_sock);
-    std::string save_path = "users/" + username + "/" + file_name_buffer;
+    std::string save_path = "users/sync_dir_" + username + "/" + file_name_buffer;
     if (received_bytes <= 0)
     {
         std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
@@ -312,7 +309,7 @@ void Server::send_file(int client_sock)
     std::string username = getUsername(client_sock);
     ssize_t received_bytes = recv(client_sock, file_name_buffer, sizeof(file_name_buffer), 0);
 
-    std::string save_path = "users/" + username + "/" + file_name_buffer;
+    std::string save_path = "users/sync_dir_" + username + "/" + file_name_buffer;
 
     if (received_bytes <= 0)
     {
@@ -331,9 +328,9 @@ void Server::send_file(int client_sock)
     std::vector<uint8_t> file_name_bytes(file_name.begin(), file_name.end());
     file_name_bytes.push_back('\0');
 
-    send_package_info(client_sock, save_path);
+    // send_package_info(client_sock, save_path);
 
-    //send_file_info(client_sock, save_path);
+    send_file_info(client_sock, save_path);
 
     std::vector<Packet> packets = Packet::create_packets_from_file(save_path);
 
@@ -392,7 +389,8 @@ void Server::send_package_info(int client_sock, std::string file_path)
     std::cout << "Tamanho do arquivo: " << file_size << " bytes." << std::endl;
 }
 
-void Server::send_file_info(int client_sock, std::string file_path){
+void Server::send_file_info(int client_sock, std::string file_path)
+{
 
     FileInfo file_info;
     file_info.retrieve_info_from_file(file_path);
@@ -420,5 +418,3 @@ std::map<int, std::string> &Server::getClients()
 {
     return clients;
 }
-
-

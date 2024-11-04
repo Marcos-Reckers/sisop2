@@ -8,6 +8,7 @@
 using namespace std;
 
 FileInfo::FileInfo() : file_name(""), file_size(0), m_time(""), a_time(""), c_time("") {}
+FileInfo::FileInfo(string file_name, int file_size, string m_time, string a_time, string c_time) : file_name(file_name), file_size(file_size), m_time(m_time), a_time(a_time), c_time(c_time) {}
 
 void FileInfo::retrieve_info_from_file(string path)
 {

@@ -8,12 +8,11 @@
 #include <iostream>
 #include <netdb.h>
 
-
 #include "packet.h"
 #include "fileInfo.h"
 #include <filesystem>
 
-Client::Client(string username, struct hostent* server, string server_port) : username(username), server(server), server_port(server_port) {}
+Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port) {}
 
 void Client::set_sock(int sock) { sock = sock; }
 
@@ -30,7 +29,7 @@ uint16_t Client::connect_to_server()
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(atoi(server_port.c_str()));
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
-	bzero(&(serv_addr.sin_zero), 8);
+    bzero(&(serv_addr.sin_zero), 8);
 
     // Conecta ao servidor -> Faz o handshake
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
@@ -103,12 +102,14 @@ void Client::send_file(string file_path)
 
 /* void Client::create_download_dir(){
     if (!std::filesystem::exists("downloads")) {
-    std::filesystem::create_directory("downloads"); 
+    std::filesystem::create_directory("downloads");
     }
 } */
 
-void Client::create_dir(string dir_name) {
-    if (!std::filesystem::exists(dir_name)) {
+void Client::create_dir(string dir_name)
+{
+    if (!std::filesystem::exists(dir_name))
+    {
         std::filesystem::create_directory(dir_name);
     }
 }
@@ -119,64 +120,64 @@ void Client::get_sync_dir()
     send_cmd("get_sync_dir");
 }
 
-
-
 void Client::receive_file()
 {
-    char file_name_buffer[256] = {0};
-    ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
-    
-    //create_download_dir();
-    create_dir("downloads");
+    // char file_name_buffer[256] = {0};
+    // ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
 
-    std::string save_path = "downloads/" + std::string(file_name_buffer);
-    if (received_bytes <= 0)
-    {
-        std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
-        return;
-    }
-    std::string file_name(file_name_buffer, received_bytes);
+    // //create_download_dir();
+    // create_dir("downloads");
+
+    // std::string save_path = "downloads/" + std::string(file_name_buffer);
+    // if (received_bytes <= 0)
+    // {
+    //     std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
+    //     return;
+    // }
+    // std::string file_name(file_name_buffer, received_bytes);
+    // std::cout << "Nome do arquivo recebido: " << file_name << std::endl;
+
+    // uint32_t file_size_network_order;
+    // received_bytes = recv(sock, &file_size_network_order, sizeof(file_size_network_order), 0);
+    // if (received_bytes <= 0)
+    // {
+    //     std::cerr << "Erro ao receber o tamanho do arquivo." << std::endl;
+    //     return;
+    // }
+    // uint32_t file_size = ntohl(file_size_network_order);
+    // std::cout << "Tamanho do arquivo recebido: " << file_size << " bytes" << std::endl;
+
+    // std::ofstream outfile(save_path, std::ios::binary);
+    // if (!outfile.is_open())
+    // {
+    //     std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
+    //     return;
+    // }
+
+    std::cout << "Recebendo informações do arquivo ANTES DE RECEIVE_FILE_INFO" << std::endl;
+
+    FileInfo file_info = receive_file_info();
+
+    std::cout << "Recebi informações do arquivo DEPOIS DE RECEIVE_FILE_INFO" << std::endl;
+
+    string file_name = file_info.get_file_name();
     std::cout << "Nome do arquivo recebido: " << file_name << std::endl;
 
-    uint32_t file_size_network_order;
-    received_bytes = recv(sock, &file_size_network_order, sizeof(file_size_network_order), 0);
-    if (received_bytes <= 0)
-    {
-        std::cerr << "Erro ao receber o tamanho do arquivo." << std::endl;
-        return;
-    }
-    uint32_t file_size = ntohl(file_size_network_order);
+    int file_size = file_info.get_file_size();
     std::cout << "Tamanho do arquivo recebido: " << file_size << " bytes" << std::endl;
 
+    create_dir("downloads");
+    std::string save_path = "downloads/" + file_name;
+
     std::ofstream outfile(save_path, std::ios::binary);
+
     if (!outfile.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
         return;
     }
 
-    // std::cout << "Recebendo informações do arquivo..." << std::endl;
-
-    // FileInfo file_info = receive_file_info();
-
-    // string file_name = file_info.get_file_name();
-    // std::cout << "Nome do arquivo recebido: " << file_name << std::endl;
-
-    // int file_size = file_info.get_file_size();
-    // std::cout << "Tamanho do arquivo recebido: " << file_size << " bytes" << std::endl;
-    
-    // create_download_dir();
-    // std::string save_path = "downloads/" + file_name;
-
-    // std::ofstream outfile(save_path, std::ios::binary);
-
-    // if(!outfile.is_open())
-    // {
-    //     std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
-    //     return;
-    // }
-
-    received_bytes = 0;
+    ssize_t received_bytes = 0;
     int total_received_bytes = 0;
     while (total_received_bytes < file_size)
     {
@@ -222,11 +223,13 @@ FileInfo Client::receive_file_info()
         std::cerr << "Erro ao receber o pacote:" << std::endl;
         return FileInfo();
     }
-    
+
     Packet packet = Packet::bytes_to_packet(packet_buffer);
     packet.print();
 
-    FileInfo file_info = Packet::packet_to_info(packet);
+    FileInfo file_info = Packet::string_to_info(packet.get_payload());
+    std::cout << "Informações do arquivo recebidas em receive_file_info:" << std::endl;
+
     return file_info;
 }
 
@@ -246,12 +249,11 @@ void Client::send_file_name(string file_path)
 }
 
 void Client::end_connection()
-{   
+{
     char buffer[256];
     recv(sock, buffer, 256, 0);
-    if(strcmp(buffer, "exit") == 0)
+    if (strcmp(buffer, "exit") == 0)
     {
         close(sock);
     }
 }
-

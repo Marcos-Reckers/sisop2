@@ -15,6 +15,7 @@ private:
 
 public:
     FileInfo();
+    FileInfo(string file_name, int file_size, string m_time, string a_time, string c_time);
 
     void retrieve_info_from_file(string path);
     void print();
