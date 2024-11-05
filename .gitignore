@@ -1,0 +1,30 @@
+# Pastas de build
+build/
+dist/
+out/
+bin/
+obj/
+
+# Configurações do Visual Studio Code
+.vscode/
+
+# Arquivos temporários do sistema
+*.tmp
+*.log
+*.lock
+*.cache
+
+# Arquivos gerados pelo editor
+*.swp
+*~
+
+# Arquivos do macOS
+.DS_Store
+
+# Arquivos ocultos do Linux
+.cache
+*~
+
+# Outros arquivos indesejados
+thumbs.db
+desktop.ini
