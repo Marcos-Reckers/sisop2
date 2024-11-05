@@ -22,13 +22,13 @@ class Client
 
         uint16_t connect_to_server();
 
-        void create_download_dir();
-
         void send_cmd(string cmd);
         void send_file(string file_path);
         void send_file_name(string file_path);
         void receive_file();
         FileInfo receive_file_info();
+        void list_files_client();
+        void list_files_server();
 
         void end_connection();
         void create_dir(string dir_name);

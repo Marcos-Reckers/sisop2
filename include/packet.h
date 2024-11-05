@@ -42,6 +42,7 @@ public:
     uint32_t get_total_size() const;
     uint16_t get_length() const;
     const std::vector<char> &get_payload() const;
+    std::string get_payload_as_string() const;
 
     void set_type(uint16_t t);
     void set_seqn(uint16_t s);

@@ -29,6 +29,9 @@ int main(int argc, char const *argv[])
         std::cerr << "Erro ao conectar ao servidor" << std::endl;
         std::cerr << "Erro: " << sock << std::endl;
         return 1;
+    }else{
+        std::cout << "Conectado ao servidor" << std::endl;
+        client.get_sync_dir();
     }
 
     while (true)
@@ -82,12 +85,12 @@ int main(int argc, char const *argv[])
 
         if (cmd.rfind("list_server", 0) == 0)
         {
-            client.send_cmd("list_server");
+            client.list_files_server();
         }
 
         if (cmd.rfind("list_client", 0) == 0)
         {
-            client.send_cmd("list_client");
+            client.list_files_client();
         }
 
         if (cmd.rfind("exit", 0) == 0)

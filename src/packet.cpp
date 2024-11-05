@@ -68,7 +68,7 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
 
 Packet Packet::create_packet_cmd(const std::string &command)
 {
-    return Packet(1, 1, 1, command.size() + 1, std::vector<char>(command.begin(), command.end()));
+    return Packet(1, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
 }
 
 std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data)
@@ -95,32 +95,11 @@ Packet Packet::create_packet_info(FileInfo &file_info)
     pkt.set_seqn(1);
     pkt.set_total_size(1);
 
-    vector<char> payload = info_to_string(file_info);
-    // printa o payload para ver se está correto
-    for (int i = 0; i < payload.size(); i++)
-    {
-        std::cout << payload[i];
-    }
-    std::cout << endl;
-
-    pkt.set_length(payload.size() + 1);
-
+    std::vector<char> payload = info_to_string(file_info);
+    pkt.set_length(payload.size());
     pkt.set_payload(payload);
 
-    // pkt.print();
-
     return pkt;
-}
-
-std::vector<char> Packet::info_to_string(FileInfo &file_info)
-{
-    // remover os /n dos timestamps
-    // std::ostringstream oss;
-    // oss << file_info.get_file_name() << ";" << file_info.get_file_size() << ";" << file_info.get_m_time() << ";" << file_info.get_a_time() << ";" << file_info.get_c_time();
-    // std::string str = oss.str();
-    // return std::vector<char>(str.begin(), str.end());
-    printf("file_info.get_file_name(): %s\n", file_info.get_file_name().c_str());
-    return std::vector<char>(file_info.get_file_name().begin(), file_info.get_file_name().end());
 }
 
 FileInfo Packet::string_to_info(const std::vector<char> &data)
@@ -202,3 +181,20 @@ void Packet::set_seqn(uint16_t s) { seqn = s; }
 void Packet::set_total_size(uint32_t ts) { total_size = ts; }
 void Packet::set_length(uint16_t len) { length = len; }
 void Packet::set_payload(const std::vector<char> &pl) { payload = pl; }
+
+std::vector<char> Packet::info_to_string(FileInfo &file_info)
+{
+    std::ostringstream oss;
+    oss << file_info.get_file_name() << ";"
+        << file_info.get_file_size() << ";"
+        << file_info.get_m_time() << ";"
+        << file_info.get_a_time() << ";"
+        << file_info.get_c_time();
+    std::string str = oss.str();
+    return std::vector<char>(str.begin(), str.end());
+}
+
+std::string Packet::get_payload_as_string() const
+{
+    return std::string(payload.begin(), payload.end());
+}

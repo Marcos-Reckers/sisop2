@@ -56,6 +56,8 @@ public:
     void send_package_info(int client_sock, std::string file_path);
     void send_file_info(int client_sock, std::string file_path);
 
+    void list_files_server(int client_sock);
+
     // Getters
     int getServerFd() const;
     sockaddr_in& getServerAddr();
