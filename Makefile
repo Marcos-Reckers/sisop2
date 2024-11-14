@@ -4,6 +4,8 @@
 SRC_DIR = src
 BUILD_DIR = build
 INCLUDE_DIR = include
+CLIENT_BUILD_DIR = $(BUILD_DIR)/client
+SERVER_BUILD_DIR = $(BUILD_DIR)/server
 
 ########################################
 #   ARQUIVOS
@@ -26,8 +28,8 @@ _CXXFLAGS_DEBUG = -g -DDEBUG -pg # Ferramenta de profiling (gprof)
 ########################################
 #   PROGRAMAS
 ########################################
-SERVER_NAME = $(BUILD_DIR)/server
-CLIENT_NAME = $(BUILD_DIR)/myClient
+SERVER_NAME = $(SERVER_BUILD_DIR)/server
+CLIENT_NAME = $(CLIENT_BUILD_DIR)/myClient
 
 ########################################
 #   REGRAS
@@ -42,7 +44,7 @@ release: build
 debug: CXXFLAGS += $(_CXXFLAGS_DEBUG)
 debug: build
 
-build: $(SERVER_NAME) $(CLIENT_NAME)
+build: $(BUILD_DIR) $(SERVER_BUILD_DIR) $(CLIENT_BUILD_DIR) $(SERVER_NAME) $(CLIENT_NAME)
 
 # Compilar o servidor
 $(SERVER_NAME): $(SERVER_SRC)
@@ -54,8 +56,16 @@ $(CLIENT_NAME): $(CLIENT_SRC)
 
 # Compilação de código objeto
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
-	@mkdir -p $(BUILD_DIR)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
+
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+$(SERVER_BUILD_DIR):
+	@mkdir -p $(SERVER_BUILD_DIR)
+
+$(CLIENT_BUILD_DIR):
+	@mkdir -p $(CLIENT_BUILD_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)/*

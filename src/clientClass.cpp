@@ -14,9 +14,9 @@
 
 Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port) {}
 
-void Client::set_sock(int sock) { sock = sock; }
+void Client::set_sock(int sock) { this->sock = sock; }
 
-uint16_t Client::connect_to_server()
+int16_t Client::connect_to_server()
 {
     struct sockaddr_in serv_addr;
     // Cria o socket
@@ -31,26 +31,36 @@ uint16_t Client::connect_to_server()
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
-    // Conecta ao servidor -> Faz o handshake
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    // Tenta conectar ao servidor por 100 segundos
+    int attempts = 0;
+    while (attempts < 10)
     {
-        cout << "Falha na conexão" << endl;
-        close(sock);
-        return -3;
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
+        {
+            std::string username_with_null = username + '\0';
+            send(sock, username_with_null.c_str(), username_with_null.size(), 0);
+
+            set_sock(sock);
+
+            return sock;
+        }
+        else
+        {
+            cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+            sleep(1); // Aguarda 1 segundo antes de tentar novamente
+            attempts++;
+        }
     }
 
-    send(sock, username.c_str(), username.size(), 0);
-
-    set_sock(sock);
-
-    return sock;
+    cout << "Falha na conexão TIMEOUT" << endl;
+    close(sock);
+    return -3;
 }
 
 void Client::send_cmd(string cmd)
 {
-
-    Packet packet = Packet::create_packet_cmd(cmd);
-    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
+    Packet cmd_packet = Packet::create_packet_cmd(cmd);
+    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(cmd_packet);
     ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
 
     if (sent_bytes < 0)
@@ -60,6 +70,7 @@ void Client::send_cmd(string cmd)
     }
 
     std::cout << "Comando enviado como pacote: " << cmd << std::endl;
+
 }
 
 void Client::send_file(string file_path)
@@ -102,9 +113,11 @@ void Client::send_file(string file_path)
 
 void Client::create_dir(string dir_name)
 {
-    if (!std::filesystem::exists(dir_name))
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string full_path = exec_path + "/" + dir_name;
+    if (!std::filesystem::exists(full_path))
     {
-        std::filesystem::create_directory(dir_name);
+        std::filesystem::create_directory(full_path);
     }
 }
 
@@ -112,6 +125,55 @@ void Client::get_sync_dir()
 {
     create_dir("sync_dir");
     send_cmd("get_sync_dir");
+
+    // while (true)
+    // {
+    //     std::vector<uint8_t> packet_buffer(Packet::packet_base_size() + MAX_PAYLOAD_SIZE);
+    //     ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+    //     if (received_bytes <= 0)
+    //     {
+    //         std::cerr << "Erro ao receber o pacote." << std::endl;
+    //         break;
+    //     }
+
+    //     Packet packet = Packet::bytes_to_packet(packet_buffer);
+
+    //     if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_SYNC")
+    //     {
+    //         break;
+    //     }
+
+    //     FileInfo file_info = Packet::string_to_info(packet.get_payload());
+    //     std::string file_name = file_info.get_file_name();
+    //     int file_size = file_info.get_file_size();
+
+    //     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    //     std::string save_path = exec_path + "/sync_dir/" + file_name;
+
+    //     std::ofstream outfile(save_path, std::ios::binary);
+    //     if (!outfile.is_open())
+    //     {
+    //         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
+    //         return;
+    //     }
+
+    //     int total_received_bytes = 0;
+    //     while (total_received_bytes < file_size)
+    //     {
+    //         received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+    //         if (received_bytes <= 0)
+    //         {
+    //             std::cerr << "Erro ao receber o pacote:" << std::endl;
+    //             break;
+    //         }
+
+    //         Packet data_packet = Packet::bytes_to_packet(packet_buffer);
+    //         outfile.write(data_packet.get_payload().data(), data_packet.get_length());
+    //         total_received_bytes += data_packet.get_length();
+    //     }
+
+    //     outfile.close();
+    // }
 }
 
 void Client::receive_file()
@@ -124,7 +186,8 @@ void Client::receive_file()
     int file_size = file_info.get_file_size();
 
     create_dir("downloads");
-    std::string save_path = "downloads/" + file_name;
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string save_path = exec_path + "/downloads/" + file_name;
 
     std::ofstream outfile(save_path, std::ios::binary);
 
@@ -150,6 +213,12 @@ void Client::receive_file()
         }
 
         Packet packet = Packet::bytes_to_packet(packet_buffer);
+        if (packet.get_type() == 1 && packet.get_payload_as_string().substr(0, 5) == "ERROR")
+        {
+            std::cerr << "Erro do servidor: " << packet.get_payload_as_string() << std::endl;
+            return;
+        }
+
         outfile.write(packet.get_payload().data(), packet.get_length());
 
         total_received_bytes += packet.get_length();
@@ -203,7 +272,17 @@ void Client::send_file_name(string file_path)
 
 void Client::list_files_client()
 {
-    std::string path = "sync_dir";
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string path = exec_path + "/sync_dir";
+
+    if (std::filesystem::is_empty(path))
+    {
+        cout << "==============================" << endl;
+        cout << "Diretório vazio" << endl;
+        cout << "==============================" << endl;
+        return;
+    }
+    
     for (const auto &entry : std::filesystem::directory_iterator(path))
     {
         FileInfo file_info;
@@ -218,6 +297,7 @@ void Client::list_files_client()
 void Client::list_files_server()
 {
     send_cmd("list_server");
+    float counter = 0;
 
     while (true)
     {
@@ -234,7 +314,18 @@ void Client::list_files_server()
         // Verifica se o pacote recebido é o pacote de fim de lista
         if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_LIST")
         {
-            break;
+            packet.print();
+
+            if (counter == 0)
+            {
+                cout << "Lista de arquivos vazia." << endl;
+            }
+            else
+            {
+                cout << "Fim da lista de arquivos." << endl;
+            }
+
+            return;
         }
 
         FileInfo file_info = Packet::string_to_info(packet.get_payload());
@@ -242,6 +333,8 @@ void Client::list_files_server()
         cout << "==============================" << endl;
         file_info.print();
         cout << "==============================" << endl;
+
+        counter++;
     }
 }
 

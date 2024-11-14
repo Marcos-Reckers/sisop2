@@ -20,7 +20,7 @@ class Client
 
         Client(string username, struct hostent* server, string server_port);
 
-        uint16_t connect_to_server();
+        int16_t connect_to_server();
 
         void send_cmd(string cmd);
         void send_file(string file_path);
