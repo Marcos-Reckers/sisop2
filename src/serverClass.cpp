@@ -76,7 +76,7 @@ void Server::acceptClients()
 
         // Aceita a conexão do cliente
         int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
-        
+
         if (client_fd < 0)
         {
             std::cerr << "Erro ao aceitar conexão do cliente." << std::endl;
@@ -90,32 +90,40 @@ void Server::acceptClients()
 
             // SEMAFORO PARA
 
-            if (!verify_active_sessions(username)){
+            if (!verify_active_sessions(username))
+            {
                 close(client_fd);
                 continue;
             }
             addClient(client_fd, username);
+            client_threads.emplace_back(&Server::handleRequest, this, client_fd);
 
             std::string username_str(username);
             std::cout << "Conexão aceita de: " << username << std::endl;
-        }
 
-        // Cria uma nova thread para lidar com o cliente
-        client_threads.emplace_back(&Server::handleRequest, this, client_fd);
+            // // TODO: FIZ NOVO
+            // //  Inicia a thread de sincronização
+            // std::thread sync_thread(&Server::sync_files, this, client_fd);
+            // sync_thread.detach(); // Desanexa a thread para que ela rode em segundo plano
+        }        
     }
 }
 
-bool Server::verify_active_sessions(string username){
+bool Server::verify_active_sessions(string username)
+{
     std::cout << "Verificando sessões ativas" << std::endl;
 
     int session_count = 0;
-    for (const auto& [session_id, user] : clients) {
-        if (user == username) {
+    for (const auto &[session_id, user] : clients)
+    {
+        if (user == username)
+        {
             session_count++;
         }
     }
 
-    if (session_count >= 2) {
+    if (session_count >= 2)
+    {
         std::cout << "O usuário " << username << " já possui duas sessões ativas. Conexão não permitida." << std::endl;
         return false;
     }
@@ -188,7 +196,7 @@ void Server::handleRequest(int client_sock)
 
         if (received_bytes == 0)
         {
-            
+
             // SEMAFORO VAI
 
             std::cout << "Conexão do cliente " << getUsername(client_sock) << " encerrada." << std::endl;
@@ -473,7 +481,8 @@ void Server::list_files_server(int client_sock)
         // send(client_sock, empty_packet_bytes.data(), empty_packet_bytes.size(), 0);
         cout << "Pasta vazia" << endl;
     }
-    else{
+    else
+    {
         for (const auto &entry : std::filesystem::directory_iterator(path))
         {
             FileInfo file_info;
@@ -500,31 +509,100 @@ void Server::list_files_server(int client_sock)
     send(client_sock, end_packet_bytes.data(), end_packet_bytes.size(), 0);
 }
 
-// void Server::sync_client_dir(int client_fd)
-// {
+// void Server::sync_files(int client_fd){
 //     std::string username = getUsername(client_fd);
+//     std::string client_dir = "/users/sync_dir_" + username;
+
+//     while (true){
+//         compare_files(client_files, client_dir, client_fd);
+
+//         std::this_thread::sleep_for(std::chrono::seconds(30));
+//     }
+
+// }
+
+// void Server::ask_for_file_list(int client_fd){
+//     std::string list_files = "list_server";
+//     Packet list_packet = Packet::create_packet_cmd(list_files);
+//     std::vector<uint8_t> list_packet_bytes = Packet::packet_to_bytes(list_packet);
+//     send(client_fd, list_packet_bytes.data(), list_packet_bytes.size(), 0);
+// }
+
+// std::vector<FileInfo> Server::receive_file_list(int client_fd){
+//     std::vector<FileInfo> file_list;
+//     while (true){
+//         std::vector<uint8_t> packet_buffer(Packet::packet_base_size() + MAX_PAYLOAD_SIZE);
+//         ssize_t received_bytes = recv(client_fd, packet_buffer.data(), packet_buffer.size(), 0);
+//         if (received_bytes <= 0){
+//             std::cerr << "Erro ao receber o pacote." << std::endl;
+//             break;
+//         }
+
+//         Packet packet = Packet::bytes_to_packet(packet_buffer);
+
+//         if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_LIST"){
+//             break;
+//         }
+
+//         FileInfo file_info = Packet::string_to_info(packet.get_payload());
+//         file_list.push_back(file_info);
+//     }
+
+//     return file_list;
+// }
+
+// void compare_files(std::vector<FileInfo> client_files, std::string client_dir, int client_fd){
 //     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-//     std::string client_dir = exec_path + "/users/sync_dir_" + username;
+//     std::string server_dir = exec_path + client_dir;
 
-//     for (const auto &entry : std::filesystem::directory_iterator(client_dir))
-//     {
-//         send_file_info(client_fd, entry.path().string());
-//         std::vector<Packet> packets = Packet::create_packets_from_file(entry.path().string());
-
-//         for (Packet packet : packets)
-//         {
-//             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-//             ssize_t sent_bytes = send(client_fd, packet_bytes.data(), packet_bytes.size(), 0);
-//             if (sent_bytes < 0)
-//             {
-//                 std::cerr << "Erro ao enviar pacote." << std::endl;
-//                 return;
+//     for (FileInfo file : client_files){
+//         std::string file_path = server_dir + "/" + file.get_name();
+//         if (!std::filesystem::exists(file_path)){
+//             send_file(client_fd, file_path);
+//             //TODO: SE O CLIENTE EXCLUI ALGO DO SYNC_DIR MAS NÃO DA O COMANDO DE DELETE, O SERVIDOR NÃO VAI SABER
+//             // O Q A GNT FAZ ? REENVIA PARA O CLIENTE ?
+//         }
+//         else{
+//             FileInfo server_file;
+//             server_file.retrieve_info_from_file(file_path);
+//             if (file.get_last_modified() > server_file.get_last_modified()){
+//                 //solicita para o cliente enviar o arquivo
+//                 //TODO: IMPLEMENTAR FUNÇÃO PARA fazer a solicitação
+//             }
+//             else if (file.get_last_modified() < server_file.get_last_modified()){
+//                 //envia o arquivo para o cliente
+//                 send_file(client_fd, file_path);                
 //             }
 //         }
 //     }
 
-//     std::string end_of_sync = "END_OF_SYNC";
-//     Packet end_packet = Packet::create_packet_cmd(end_of_sync);
-//     std::vector<uint8_t> end_packet_bytes = Packet::packet_to_bytes(end_packet);
-//     send(client_fd, end_packet_bytes.data(), end_packet_bytes.size(), 0);
+//     for (const auto &entry : std::filesystem::directory_iterator(server_dir)){
+//         std::string file_name = entry.path().filename().string();
+//         bool file_exists = false;
+//         for (FileInfo file : client_files){
+//             if (file.get_name() == file_name){
+//                 file_exists = true;
+//                 break;
+//             }
+//         }
+
+//         if (!file_exists){
+//             send_file(client_fd, entry.path());
+//         }
+//     }
 // }
+
+
+
+// // void Client::send_file_list(int client_fd, std::vector<FileInfo> file_list){
+// //     for (FileInfo file : file_list){
+// //         Packet packet = Packet::create_packet_info(file);
+// //         std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
+// //         send(client_fd, packet_bytes.data(), packet_bytes.size(), 0);
+// //     }
+
+// //     std::string end_of_list = "END_OF_LIST";
+// //     Packet end_packet = Packet::create_packet_cmd(end_of_list);
+// //     std::vector<uint8_t> end_packet_bytes = Packet::packet_to_bytes(end_packet);
+// //     send(client_fd, end_packet_bytes.data(), end_packet_bytes.size(), 0);
+// // }

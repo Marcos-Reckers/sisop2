@@ -3,7 +3,9 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <cstring>
+#include <thread>
 #include <filesystem>
+
 
 int main(int argc, char const *argv[])
 {
@@ -36,10 +38,11 @@ int main(int argc, char const *argv[])
     {
         std::cout << "Conectado ao servidor" << std::endl;
         client.get_sync_dir();
+        std::thread sync_thread(&Client::monitor_sync_dir, &client);
         while (true)
         {
             std::string cmd;
-            std::cout << "Digite um comando: ";
+            std::cout << "Digite um comando: " << std::flush;
             std::getline(std::cin, cmd);
 
             if (cmd.rfind("upload", 0) == 0)
@@ -110,6 +113,7 @@ int main(int argc, char const *argv[])
             }
         }
 
+        sync_thread.join();
         close(sock);
 
         return 0;

@@ -1,5 +1,6 @@
 #include "clientClass.h"
 
+#include <sys/inotify.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -7,14 +8,17 @@
 #include <fstream>
 #include <iostream>
 #include <netdb.h>
+#include <filesystem>
+#include <thread>
+#include <limits.h>
 
 #include "packet.h"
 #include "fileInfo.h"
-#include <filesystem>
 
 Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port) {}
 
 void Client::set_sock(int sock) { this->sock = sock; }
+
 
 int16_t Client::connect_to_server()
 {
@@ -123,57 +127,7 @@ void Client::create_dir(string dir_name)
 
 void Client::get_sync_dir()
 {
-    create_dir("sync_dir");
     send_cmd("get_sync_dir");
-
-    // while (true)
-    // {
-    //     std::vector<uint8_t> packet_buffer(Packet::packet_base_size() + MAX_PAYLOAD_SIZE);
-    //     ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
-    //     if (received_bytes <= 0)
-    //     {
-    //         std::cerr << "Erro ao receber o pacote." << std::endl;
-    //         break;
-    //     }
-
-    //     Packet packet = Packet::bytes_to_packet(packet_buffer);
-
-    //     if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_SYNC")
-    //     {
-    //         break;
-    //     }
-
-    //     FileInfo file_info = Packet::string_to_info(packet.get_payload());
-    //     std::string file_name = file_info.get_file_name();
-    //     int file_size = file_info.get_file_size();
-
-    //     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    //     std::string save_path = exec_path + "/sync_dir/" + file_name;
-
-    //     std::ofstream outfile(save_path, std::ios::binary);
-    //     if (!outfile.is_open())
-    //     {
-    //         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
-    //         return;
-    //     }
-
-    //     int total_received_bytes = 0;
-    //     while (total_received_bytes < file_size)
-    //     {
-    //         received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
-    //         if (received_bytes <= 0)
-    //         {
-    //             std::cerr << "Erro ao receber o pacote:" << std::endl;
-    //             break;
-    //         }
-
-    //         Packet data_packet = Packet::bytes_to_packet(packet_buffer);
-    //         outfile.write(data_packet.get_payload().data(), data_packet.get_length());
-    //         total_received_bytes += data_packet.get_length();
-    //     }
-
-    //     outfile.close();
-    // }
 }
 
 void Client::receive_file()
@@ -346,4 +300,75 @@ void Client::end_connection()
     {
         close(sock);
     }
+}
+
+
+//TODO: FIZ NOVO
+// void Client::startSyncThread() {
+//     std::thread sync_thread(&Client::monitor_sync_dir, this);
+//     sync_thread.detach();
+// }
+
+// void Client::join_sync_thread() {
+//     sync_thread.join();
+// }
+
+void Client::monitor_sync_dir() {
+    create_dir("sync_dir");
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string sync_dir = exec_path + "/sync_dir";
+
+    int fd = inotify_init();
+    if (fd < 0) {
+        perror("inotify_init");
+        return;
+    }
+
+    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY);
+    if (wd < 0) {
+        perror("inotify_add_watch");
+        close(fd);
+        return;
+    }
+
+    const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
+    char *buffer = new char[buf_size];
+
+    while (true) {
+        int length = read(fd, buffer, buf_size);
+        if (length < 0) {
+            perror("read");
+            break;
+        }
+
+        int i = 0;
+        while (i < length) {
+            struct inotify_event *event = (struct inotify_event *) &buffer[i];
+
+            if (event->len) {
+                if (event->mask & IN_CREATE) {
+                    // std::cout << "Arquivo criado: " << event->name << std::endl;
+                    send_cmd("upload");
+                    send_file(sync_dir + "/" + std::string(event->name));
+
+            }
+                // if (event->mask & IN_DELETE) {
+                //     // std::cout << "Arquivo excluído: " << event->name << std::endl;
+                //     send_cmd("delete");
+                //     send_file_name(event->name);
+                // }
+                // if (event->mask & IN_MODIFY) {
+                //     // std::cout << "Arquivo modificado: " << event->name << std::endl;
+                //     send_cmd("upload");
+                //     send_file(sync_dir + "/" + std::string(event->name));
+                // }
+            }
+
+            i += sizeof(struct inotify_event) + event->len;
+        }
+    }
+
+    delete[] buffer;
+    inotify_rm_watch(fd, wd);
+    close(fd);
 }

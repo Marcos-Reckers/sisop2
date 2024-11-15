@@ -62,7 +62,6 @@ private:
 
     void list_files_server(int client_sock);
 
-    void sync_client_dir(int client_fd);
 
     // Getters
     int getServerFd() const;

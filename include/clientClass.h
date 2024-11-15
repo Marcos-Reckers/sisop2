@@ -33,6 +33,9 @@ class Client
         void end_connection();
         void create_dir(string dir_name);
         void get_sync_dir();
+        // void startSyncThread();
+        // void join_sync_thread();
+        void monitor_sync_dir();
 
 
         //download
