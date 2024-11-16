@@ -8,6 +8,10 @@
 #include <sys/socket.h>
 #include <fstream>
 
+#include "serverClass.h"
+#include <sys/inotify.h>
+#include <limits.h>
+#include <unistd.h>
 using namespace std;
 
 FileInfo::FileInfo() : file_name(""), file_size(0), m_time(""), a_time(""), c_time("") {}
@@ -298,4 +302,65 @@ void FileInfo::delete_file(string file_path, int sock)
     {
         std::cout << "Arquivo deletado com sucesso." << std::endl;
     }
+}
+
+
+void FileInfo::monitor_sync_dir(string folder, int sock) {
+
+    FileInfo::create_dir(folder);
+    
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string sync_dir = exec_path + folder;
+
+    int fd = inotify_init();
+    if (fd < 0) {
+        perror("inotify_init");
+        return;
+    }
+
+    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY);
+    if (wd < 0) {
+        perror("inotify_add_watch");
+        close(fd);
+        return;
+    }
+
+    const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
+    char *buffer = new char[buf_size];
+
+    while (true) {
+        int length = read(fd, buffer, buf_size);
+        if (length < 0) {
+            perror("read");
+            break;
+        }
+
+        int i = 0;
+        while (i < length) {
+            struct inotify_event *event = (struct inotify_event *) &buffer[i];
+
+            if (event->len) {
+                if (event->mask & IN_CREATE) {
+                    // std::cout << "Arquivo criado: " << event->name << std::endl;
+                    //função curinga q tem no server e no client
+                }
+                // if (event->mask & IN_DELETE) {
+                //     // std::cout << "Arquivo excluído: " << event->name << std::endl;
+                //     send_cmd("delete");
+                //     send_file_name(event->name);
+                // }
+                // if (event->mask & IN_MODIFY) {
+                //     // std::cout << "Arquivo modificado: " << event->name << std::endl;
+                //     send_cmd("upload");
+                //     send_file(sync_dir + "/" + std::string(event->name));
+                // }
+            }
+
+            i += sizeof(struct inotify_event) + event->len;
+        }
+    }
+
+    delete[] buffer;
+    inotify_rm_watch(fd, wd);
+    close(fd);
 }

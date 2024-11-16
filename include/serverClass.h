@@ -61,7 +61,7 @@ private:
     socklen_t getAddrLen() const;
     std::vector<std::thread> &getClientThreads();
     std::map<int, std::string> &getClients();
-    std::string getUsername(int client_sock);
+    std::string static getUsername(int client_sock);
 };
 
 #endif // SERVERCLASS_H

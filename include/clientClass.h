@@ -34,6 +34,9 @@ class Client
         // void handle_list_server_request();
         // void handle_list_client_request();
 
+        void handle_download_request();
+        void handle_upload_request();
+        void handle_delete_request();
 
         void set_sock(int sock);
 };

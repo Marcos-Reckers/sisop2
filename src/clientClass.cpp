@@ -79,7 +79,6 @@ void Client::send_cmd(string cmd)
     }
 
     std::cout << "Comando enviado como pacote: " << cmd << std::endl;
-
 }
 
 void Client::get_sync_dir()
@@ -99,62 +98,54 @@ bool Client::end_connection()
     return false;
 }
 
-// void Client::monitor_sync_dir() {
-//     create_dir("sync_dir");
-//     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-//     std::string sync_dir = exec_path + "/sync_dir";
+void Client::handle_upload_request()
+{
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string directory = exec_path + "sync_dir" + "/";
+    
+    FileInfo::receive_file(directory, sock);
+}
 
-//     int fd = inotify_init();
-//     if (fd < 0) {
-//         perror("inotify_init");
-//         return;
-//     }
+void Client::handle_download_request()
+{
+    char file_name_buffer[256] = {0};
+    ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
 
-//     int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY);
-//     if (wd < 0) {
-//         perror("inotify_add_watch");
-//         close(fd);
-//         return;
-//     }
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string file_path = exec_path + "sync_dir" + "/" + file_name_buffer;
+    std::cout << "Arquivo a ser enviado: " << file_path << std::endl;
 
-//     const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
-//     char *buffer = new char[buf_size];
+    if (received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
+        return;
+    }
 
-//     while (true) {
-//         int length = read(fd, buffer, buf_size);
-//         if (length < 0) {
-//             perror("read");
-//             break;
-//         }
+    if (!std::filesystem::exists(file_path))
+    {
+        std::cerr << "Arquivo não encontrado." << std::endl;
+        std::string error_msg = "ERROR: Arquivo não encontrado.";
+        Packet error_packet = Packet::create_packet_cmd(error_msg);
+        std::vector<uint8_t> error_packet_bytes = Packet::packet_to_bytes(error_packet);
+        send(sock, error_packet_bytes.data(), error_packet_bytes.size(), 0);
+        return;
+    }
 
-//         int i = 0;
-//         while (i < length) {
-//             struct inotify_event *event = (struct inotify_event *) &buffer[i];
+    FileInfo::send_file(file_path, sock);
+}
 
-//             if (event->len) {
-//                 if (event->mask & IN_CREATE) {
-//                     // std::cout << "Arquivo criado: " << event->name << std::endl;
-//                     send_cmd("upload");
-//                     send_file(sync_dir + "/" + std::string(event->name), sock);
+void Client::handle_delete_request()
+{
+    char file_name_buffer[256] = {0};
+    ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
 
-//             }
-//                 // if (event->mask & IN_DELETE) {
-//                 //     // std::cout << "Arquivo excluído: " << event->name << std::endl;
-//                 //     send_cmd("delete");
-//                 //     send_file_name(event->name);
-//                 // }
-//                 // if (event->mask & IN_MODIFY) {
-//                 //     // std::cout << "Arquivo modificado: " << event->name << std::endl;
-//                 //     send_cmd("upload");
-//                 //     send_file(sync_dir + "/" + std::string(event->name));
-//                 // }
-//             }
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string path = exec_path + "sync_dir" + "/" + file_name_buffer;
 
-//             i += sizeof(struct inotify_event) + event->len;
-//         }
-//     }
+    FileInfo::delete_file(path, sock);
+}
 
-//     delete[] buffer;
-//     inotify_rm_watch(fd, wd);
-//     close(fd);
-// }
+
+
+
+

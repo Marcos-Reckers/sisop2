@@ -74,6 +74,7 @@
     "io_context": "cpp",
     "netfwd": "cpp",
     "socket": "cpp",
-    "future": "cpp"
+    "future": "cpp",
+    "regex": "cpp"
   }
 }
