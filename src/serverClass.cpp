@@ -1,20 +1,4 @@
-#include <iostream>
-#include <cstring>      // Para memset
-#include <sys/socket.h> // Para sockets
-#include <arpa/inet.h>  // Para inet_pton, sockaddr_in
-#include <unistd.h>     // Para close
-#include <thread>       // Para std::thread
-#include <vector>       // Para armazenar threads ativas
-#include <string>       // Para std::string
-#include <filesystem>
-#include <fstream>
-#include <map>
-#include <dirent.h>
-#include <sys/stat.h>
-
 #include "serverClass.h"
-#include "packet.h"
-#include "fileInfo.h"
 
 // Construtor da classe que recebe a porta como argumento
 Server::Server(int port) : server_fd(-1), port(port)
@@ -113,6 +97,13 @@ void Server::get_sync_dir(int client_fd)
     std::string username = getUsername(client_fd);
     std::string dir_path = "users/sync_dir_" + username;
     FileInfo::create_dir(dir_path);
+}
+
+void Server::handle_sync(int sock)
+{
+    string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    string path = exec_path + "sync_dir_" + getUsername(sock);
+    FileInfo::monitor_sync_dir(path, sock);
 }
 
 // Método que adiciona o cliente ao map
@@ -244,6 +235,11 @@ void Server::handle_delete_request(int client_sock)
     char file_name_buffer[256] = {0};
     std::string username = getUsername(client_sock);
     ssize_t received_bytes = recv(client_sock, file_name_buffer, sizeof(file_name_buffer), 0);
+    if (received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
+        return;
+    }
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     std::string path = exec_path + "/users/sync_dir_" + username + "/" + file_name_buffer;

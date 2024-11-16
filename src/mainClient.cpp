@@ -1,10 +1,5 @@
 #include "clientClass.h"
-#include <iostream>
-#include <unistd.h>
-#include <netdb.h>
-#include <cstring>
-#include <thread>
-#include <filesystem>
+
 
 int main(int argc, char const *argv[])
 {
@@ -37,9 +32,7 @@ int main(int argc, char const *argv[])
     else
     {
         std::cout << "Conectado ao servidor" << std::endl;
-        FileInfo::create_dir("sync_dir");
-        client.get_sync_dir();
-        // std::thread sync_thread(&Client::monitor_sync_dir, &client);
+        std::thread sync_thread(&Client::handle_sync, &client, sock);
         while (true)
         {
             std::string cmd;
@@ -51,10 +44,10 @@ int main(int argc, char const *argv[])
                 std::string file_path = cmd.substr(7);
                 if (!file_path.empty())
                 {
-                    client.send_cmd("upload");
+                    cout << "Enviando arquivo: " << file_path << endl;
                     if (std::filesystem::exists(file_path))
                     {
-                        // client.send_file(file_path, sock);
+                        FileInfo::send_cmd("upload", sock);
                         FileInfo::send_file(file_path, sock);
                     }
                     else
@@ -67,13 +60,12 @@ int main(int argc, char const *argv[])
                     std::cerr << "Comando inválido. Uso: upload <path/filename.ext>" << std::endl;
                 }
             }
-
-            if (cmd.rfind("delete", 0) == 0)
+            else if (cmd.rfind("delete", 0) == 0)
             {
                 std::string file_name = cmd.substr(7);
                 if (!file_name.empty())
                 {
-                    client.send_cmd("delete");
+                    FileInfo::send_cmd("delete", sock);
                     FileInfo::send_file_name(file_name, sock);
                 }
                 else
@@ -81,13 +73,12 @@ int main(int argc, char const *argv[])
                     std::cerr << "Comando inválido. Uso: delete <filename.ext>" << std::endl;
                 }
             }
-
-            if (cmd.rfind("download", 0) == 0)
+            else if (cmd.rfind("download", 0) == 0)
             {
                 std::string file_name = cmd.substr(9);
                 if (!file_name.empty())
                 {
-                    client.send_cmd("download");
+                    FileInfo::send_cmd("download", sock);
                     FileInfo::send_file_name(file_name, sock);
                     FileInfo::receive_file("/downloads", sock);
                 }
@@ -96,31 +87,32 @@ int main(int argc, char const *argv[])
                     std::cerr << "Comando inválido. Uso: download <filename.ext>" << std::endl;
                 }
             }
-
-            if (cmd.rfind("list_server", 0) == 0)
+            else if (cmd.rfind("list_server", 0) == 0)
             {
-                client.send_cmd("list_server");
+                FileInfo::send_cmd("list_server", sock);
                 FileInfo::receive_list_files(sock);
                 std::cout << std::endl;
             }
-
-            if (cmd.rfind("list_client", 0) == 0)
+            else if (cmd.rfind("list_client", 0) == 0)
             {
                 std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
                 std::string path = exec_path + "/" + "sync_dir";
                 vector<FileInfo> files = FileInfo::list_files(path);
                 FileInfo::print_list_files(files);
             }
-
-            if (cmd.rfind("exit", 0) == 0)
+            else if (cmd.rfind("exit", 0) == 0)
             {
-                client.send_cmd("exit");
+                FileInfo::send_cmd("exit", sock);
                 client.end_connection();
                 return 0;
             }
+            else
+            {
+                std::cerr << "Comando inválido." << std::endl;
+            }
         }
 
-        // sync_thread.join();
+        sync_thread.join();
         close(sock);
 
         return 0;

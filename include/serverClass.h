@@ -1,13 +1,8 @@
 #ifndef SERVERCLASS_H
 #define SERVERCLASS_H
 
-#include <string>
-#include <vector>
-#include <map>
-#include <thread>
-#include <semaphore.h>
-#include <netinet/in.h> // Para sockaddr_in
-#include "packet.h"
+#include "fileInfo.h"
+
 
 class Server
 {
@@ -52,6 +47,7 @@ private:
     // Método para encerrar a conexão com um cliente
     void close_connection(int client_sock);
     void get_sync_dir(int client_sock);
+    void handle_sync(int client_sock);
 
 
 
@@ -61,7 +57,7 @@ private:
     socklen_t getAddrLen() const;
     std::vector<std::thread> &getClientThreads();
     std::map<int, std::string> &getClients();
-    std::string static getUsername(int client_sock);
+    std::string getUsername(int client_sock);
 };
 
 #endif // SERVERCLASS_H

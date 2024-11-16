@@ -1,19 +1,5 @@
 #include "clientClass.h"
 
-#include <sys/inotify.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <netdb.h>
-#include <filesystem>
-#include <thread>
-#include <limits.h>
-
-#include "packet.h"
-#include "fileInfo.h"
 
 Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port) {}
 
@@ -66,24 +52,9 @@ int16_t Client::connect_to_server()
     return -3;
 }
 
-void Client::send_cmd(string cmd)
-{
-    Packet cmd_packet = Packet::create_packet_cmd(cmd);
-    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(cmd_packet);
-    ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
-
-    if (sent_bytes < 0)
-    {
-        std::cerr << "Erro ao enviar comando como pacote." << std::endl;
-        return;
-    }
-
-    std::cout << "Comando enviado como pacote: " << cmd << std::endl;
-}
-
 void Client::get_sync_dir()
 {
-    send_cmd("get_sync_dir");
+    FileInfo::send_cmd("get_sync_dir", sock);
 }
 
 bool Client::end_connection()
@@ -96,6 +67,11 @@ bool Client::end_connection()
         return true;
     }
     return false;
+}
+
+void Client::handle_sync(int sock)
+{
+    FileInfo::monitor_sync_dir("sync_dir", sock);
 }
 
 void Client::handle_upload_request()
@@ -138,6 +114,11 @@ void Client::handle_delete_request()
 {
     char file_name_buffer[256] = {0};
     ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
+    if(received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
+        return;
+    }
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     std::string path = exec_path + "sync_dir" + "/" + file_name_buffer;

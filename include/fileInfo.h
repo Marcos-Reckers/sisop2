@@ -2,7 +2,28 @@
 #define FILEINFO_H
 
 #include <string>
+#include <sys/stat.h>
+#include <ctime>
+#include <filesystem>
+#include <iostream>
+#include <algorithm>
+#include <sys/socket.h>
+#include <fstream>
+#include <sys/inotify.h>
+#include <limits.h>
+#include <unistd.h>
 #include "packet.h"
+#include <arpa/inet.h>
+#include <cstring>
+#include <netdb.h>
+#include <thread>
+#include <map>
+#include <semaphore.h>
+#include <netinet/in.h>
+#include <vector>
+#include <cstdint>
+#include <cmath>
+#include <sstream>
 
 using namespace std;
 
@@ -45,6 +66,8 @@ public:
     void static delete_file(string file_path, int sock);
     void static send_file_name(string file_path, int sock);
     void static receive_list_files(int sock);
+    void static send_cmd(std::string cmd, int sock);
+    void static monitor_sync_dir(string folder, int sock);
 };
 
 #endif // FILEINFO_H

@@ -1,9 +1,8 @@
 #ifndef CLIENTCLASS_H
 #define CLIENTCLASS_H
 
-#include <iostream>
-#include <string>
-#include "packet.h"
+#include "fileInfo.h"
+
 
 using namespace std;
 
@@ -21,11 +20,10 @@ class Client
         Client(string username, struct hostent* server, string server_port);
 
         int16_t connect_to_server();
-
-        void send_cmd(string cmd);
  
         bool end_connection();
         void get_sync_dir();
+        void handle_sync(int sock);
 
         //void monitor_sync_dir();
 
@@ -42,4 +40,4 @@ class Client
 };
 
 
-#endif
+#endif // CLIENTCLASS_H

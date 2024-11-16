@@ -1,11 +1,4 @@
 #include "packet.h"
-#include "fileInfo.h"
-#include <cstring> // Para memcpy
-#include <fstream> // Para ifstream
-#include <cmath>   // Para ceil
-#include <algorithm>
-#include <iostream>
-#include <sstream> // Para istringstream
 
 Packet::Packet() : type(0), seqn(0), total_size(0), length(0), payload() {}
 

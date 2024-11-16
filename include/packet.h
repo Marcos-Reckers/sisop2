@@ -1,9 +1,6 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include <vector>
-#include <cstdint>
-#include <string>
 #include "fileInfo.h"
 
 #define MAX_PAYLOAD_SIZE 4096
