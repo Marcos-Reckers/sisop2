@@ -186,6 +186,7 @@ void Server::handleRequest(int client_sock)
             std::vector<char> cmd_vec = pkt.get_payload();
             std::string cmd(cmd_vec.begin(), cmd_vec.end());
             std::cout << "Comando recebido: " << cmd << std::endl;
+            
             if (cmd.substr(0, 6) == "upload")
             {
                 handle_upload_request(client_sock);

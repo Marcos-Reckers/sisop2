@@ -84,6 +84,7 @@ void FileInfo::receive_file(string directory, int sock)
         }
 
         Packet packet = Packet::bytes_to_packet(packet_buffer);
+
         if (packet.get_type() == 1 && packet.get_payload_as_string().substr(0, 5) == "ERROR")
         {
             std::cerr << "Erro do servidor: " << packet.get_payload_as_string() << std::endl;

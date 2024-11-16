@@ -32,7 +32,7 @@ int main(int argc, char const *argv[])
     else
     {
         std::cout << "Conectado ao servidor" << std::endl;
-        std::thread sync_thread(&Client::handle_sync, &client, sock);
+        // std::thread sync_thread(&Client::handle_sync, &client, sock);
         while (true)
         {
             std::string cmd;
@@ -112,7 +112,7 @@ int main(int argc, char const *argv[])
             }
         }
 
-        sync_thread.join();
+        // sync_thread.join();
         close(sock);
 
         return 0;

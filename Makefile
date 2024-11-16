@@ -34,17 +34,17 @@ CLIENT_NAME = $(CLIENT_BUILD_DIR)/myClient
 ########################################
 #   REGRAS
 ########################################
-.PHONY: all release debug clean build server client
+.PHONY: all release debug clean compile server client
 
 all: release
 
 release: CXXFLAGS += $(_CXXFLAGS_RELEASE)
-release: build
+release: compile
 
 debug: CXXFLAGS += $(_CXXFLAGS_DEBUG)
-debug: build
+debug: compile
 
-build: $(BUILD_DIR) $(SERVER_BUILD_DIR) $(CLIENT_BUILD_DIR) $(SERVER_NAME) $(CLIENT_NAME)
+compile: $(BUILD_DIR) $(SERVER_BUILD_DIR) $(CLIENT_BUILD_DIR) $(SERVER_NAME) $(CLIENT_NAME)
 
 # Compilar o servidor
 $(SERVER_NAME): $(SERVER_SRC)
