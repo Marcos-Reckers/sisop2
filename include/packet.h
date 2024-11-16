@@ -8,6 +8,8 @@
 
 #define MAX_PAYLOAD_SIZE 4096
 
+class FileInfo; // Forward declaration
+
 class Packet
 {
 private:

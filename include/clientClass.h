@@ -23,27 +23,17 @@ class Client
         int16_t connect_to_server();
 
         void send_cmd(string cmd);
-        void send_file(string file_path);
-        void send_file_name(string file_path);
-        void receive_file();
-        FileInfo receive_file_info();
-        void list_files_client();
-        void list_files_server();
-
-        void end_connection();
-        void create_dir(string dir_name);
+ 
+        bool end_connection();
         void get_sync_dir();
-        // void startSyncThread();
-        // void join_sync_thread();
-        void monitor_sync_dir();
 
+        //void monitor_sync_dir();
 
-        //download
-        //list_server
-        //list_client
-        //get_sync_dir
+        // void handle_upload_request(string file_path, int client_sock);
+        // void handle_download_request();
+        // void handle_list_server_request();
+        // void handle_list_client_request();
 
-        //exit -> last?? handshake : client sends fin -> server sends ack-fin -> client sends ack back
 
         void set_sock(int sock);
 };

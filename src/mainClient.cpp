@@ -6,7 +6,6 @@
 #include <thread>
 #include <filesystem>
 
-
 int main(int argc, char const *argv[])
 {
     if (argc < 4)
@@ -14,13 +13,14 @@ int main(int argc, char const *argv[])
         std::cerr << "Uso: " << argv[0] << "<username> <hostname> <port>" << std::endl;
         return 1;
     }
-    
+
     std::vector<std::string> args{argv, argv + argc};
 
     struct hostent *server;
 
     server = gethostbyname(argv[2]);
-    if (server == NULL) {
+    if (server == NULL)
+    {
         std::cerr << "ERROR, no such host" << std::endl;
         exit(0);
     }
@@ -37,8 +37,9 @@ int main(int argc, char const *argv[])
     else
     {
         std::cout << "Conectado ao servidor" << std::endl;
+        FileInfo::create_dir("sync_dir");
         client.get_sync_dir();
-        std::thread sync_thread(&Client::monitor_sync_dir, &client);
+        // std::thread sync_thread(&Client::monitor_sync_dir, &client);
         while (true)
         {
             std::string cmd;
@@ -53,7 +54,8 @@ int main(int argc, char const *argv[])
                     client.send_cmd("upload");
                     if (std::filesystem::exists(file_path))
                     {
-                        client.send_file(file_path);
+                        // client.send_file(file_path, sock);
+                        FileInfo::send_file(file_path, sock);
                     }
                     else
                     {
@@ -72,7 +74,7 @@ int main(int argc, char const *argv[])
                 if (!file_name.empty())
                 {
                     client.send_cmd("delete");
-                    client.send_file_name(file_name);
+                    FileInfo::send_file_name(file_name, sock);
                 }
                 else
                 {
@@ -86,8 +88,8 @@ int main(int argc, char const *argv[])
                 if (!file_name.empty())
                 {
                     client.send_cmd("download");
-                    client.send_file_name(file_name);
-                    client.receive_file();
+                    FileInfo::send_file_name(file_name, sock);
+                    FileInfo::receive_file("/downloads", sock);
                 }
                 else
                 {
@@ -97,12 +99,17 @@ int main(int argc, char const *argv[])
 
             if (cmd.rfind("list_server", 0) == 0)
             {
-                client.list_files_server();
+                client.send_cmd("list_server");
+                FileInfo::receive_list_files(sock);
+                std::cout << std::endl;
             }
 
             if (cmd.rfind("list_client", 0) == 0)
             {
-                client.list_files_client();
+                std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+                std::string path = exec_path + "/" + "sync_dir";
+                vector<FileInfo> files = FileInfo::list_files(path);
+                FileInfo::print_list_files(files);
             }
 
             if (cmd.rfind("exit", 0) == 0)
@@ -113,7 +120,7 @@ int main(int argc, char const *argv[])
             }
         }
 
-        sync_thread.join();
+        // sync_thread.join();
         close(sock);
 
         return 0;

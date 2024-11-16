@@ -66,6 +66,14 @@
     "__nullptr": "cpp",
     "filesystem": "cpp",
     "map": "cpp",
-    "locale": "cpp"
+    "locale": "cpp",
+    "forward_list": "cpp",
+    "list": "cpp",
+    "buffer": "cpp",
+    "executor": "cpp",
+    "io_context": "cpp",
+    "netfwd": "cpp",
+    "socket": "cpp",
+    "future": "cpp"
   }
 }

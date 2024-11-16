@@ -14,16 +14,11 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
-
-
-
     // Cria uma thread para aceitar clientes de forma contínua
     std::thread accept_thread(&Server::acceptClients, &server);
 
     // Cria uma thread para verificar sync_dir de clientes
     // std::thread sync_thread(&Server::sync_client_dir, &server);
-
-
 
     // Espera até que o servidor seja encerrado
     std::cout << "Pressione Enter para encerrar o servidor..." << std::endl;

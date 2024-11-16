@@ -43,24 +43,16 @@ private:
     void handleRequest(int client_sock);
 
     // Método para receber um arquivo
-    void receive_file(int client_sock);
 
-    void send_file(int client_sock);
-
-    bool verify_active_sessions(string username);
-
-    // Método para deletar um arquivo
-    void delete_file(int client_sock);
+    void handle_download_request(int client_sock);
+    void handle_upload_request(int client_sock);
+    void handle_list_request(int client_sock);
+    void handle_delete_request(int client_sock);
 
     // Método para encerrar a conexão com um cliente
     void close_connection(int client_sock);
-    void create_client_dir(std::string username);
     void get_sync_dir(int client_sock);
 
-    void send_package_info(int client_sock, std::string file_path);
-    void send_file_info(int client_sock, std::string file_path);
-
-    void list_files_server(int client_sock);
 
 
     // Getters
