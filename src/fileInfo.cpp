@@ -84,7 +84,7 @@ void FileInfo::receive_file(std::string directory, int sock)
         }
 
         Packet packet = Packet::bytes_to_packet(header_buffer);
-
+        cout << "Pacote " << packet.get_seqn() << " de tamanho: " << received_bytes + packet.get_length() << " bytes recebido." << std::endl;
         // Recebe o payload do pacote
         uint16_t payload_length = packet.get_length();
         if (payload_length > 0)
@@ -332,7 +332,6 @@ void FileInfo::delete_file(string file_path, int sock)
     }
 }
 
-
 void FileInfo::monitor_sync_dir(string folder, int sock) {
 
     FileInfo::create_dir(folder);
@@ -346,7 +345,7 @@ void FileInfo::monitor_sync_dir(string folder, int sock) {
         return;
     }
 
-    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY);
+    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM);
     if (wd < 0) {
         perror("inotify_add_watch");
         close(fd);
@@ -368,22 +367,18 @@ void FileInfo::monitor_sync_dir(string folder, int sock) {
             struct inotify_event *event = (struct inotify_event *) &buffer[i];
 
             if (event->len) {
-                if (event->mask & IN_CREATE) {
+                if (event->mask & IN_CLOSE_WRITE) {
                     string file_name = event->name;
-                    std::cout << "Arquivo criado: " << file_name << std::endl;
-                    FileInfo::send_cmd("upload", sock);
-                    FileInfo::send_file(sync_dir + "/" +  file_name, sock);
+                        cout << "Arquivo pronto para envio: " << file_name << endl;
+                        FileInfo::send_cmd("upload", sock);
+                        FileInfo::send_file(sync_dir + "/" +  file_name, sock);
                 }
-                // if (event->mask & IN_DELETE) {
-                //     // std::cout << "Arquivo excluído: " << event->name << std::endl;
-                //     send_cmd("delete");
-                //     send_file_name(event->name);
-                // }
-                // if (event->mask & IN_MODIFY) {
-                //     // std::cout << "Arquivo modificado: " << event->name << std::endl;
-                //     send_cmd("upload");
-                //     send_file(sync_dir + "/" + std::string(event->name));
-                // }
+                if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
+                    string file_name = event->name;
+                        cout << "Arquivo deletado: " << file_name << endl;
+                        FileInfo::send_cmd("delete", sock);
+                        FileInfo::send_file_name(file_name, sock);
+                }
             }
 
             i += sizeof(struct inotify_event) + event->len;

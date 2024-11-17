@@ -71,6 +71,7 @@ bool Client::end_connection()
 
 void Client::handle_sync(int sock)
 {
+    FileInfo::send_cmd("get_sync_dir", sock);
     FileInfo::monitor_sync_dir("sync_dir", sock);
 }
 
