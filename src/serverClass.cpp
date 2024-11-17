@@ -93,10 +93,81 @@ void Server::acceptClients()
 }
 
 
-void Server::handle_sync(int sock)
+void Server::handle_sync(int client_sock)
 {
-    string path = "/users/sync_dir_" + getUsername(sock);
-    FileInfo::monitor_sync_dir(path, sock);
+    std::string username = getUsername(client_sock);
+    std::string folder = "users/sync_dir_" + username;
+    monitor_sync_dir(folder, client_sock);
+}
+
+void Server::monitor_sync_dir(std::string folder, int origin_sock)
+{
+    FileInfo::create_dir(folder);
+
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string sync_dir = exec_path + "/" + folder;
+
+    int fd = inotify_init();
+    if (fd < 0) {
+        perror("inotify_init");
+        return;
+    }
+
+    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM);
+    if (wd < 0) {
+        perror("inotify_add_watch");
+        close(fd);
+        return;
+    }
+
+    const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
+    char *buffer = new char[buf_size];
+
+    while (true) {
+        int length = read(fd, buffer, buf_size);
+        if (length < 0) {
+            perror("read");
+            break;
+        }
+
+        int i = 0;
+        while (i < length) {
+            struct inotify_event *event = (struct inotify_event *) &buffer[i];
+
+            if (event->len) {
+                if (event->mask & IN_CLOSE_WRITE) {
+                    string file_name = event->name;
+                    for (auto &client_pair : clients) {
+                        int client_sock = client_pair.first;
+                        std::string client_username = client_pair.second;
+                        if (client_username == getUsername(origin_sock) && client_sock != origin_sock) {
+                            cout << "Enviando arquivo para cliente: " << client_sock << endl;
+                            FileInfo::send_cmd("upload", client_sock);
+                            FileInfo::send_file(sync_dir + "/" + file_name, client_sock);
+                        }
+                    }
+                }
+                if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
+                    string file_name = event->name;
+                    for (auto &client_pair : clients) {
+                        int client_sock = client_pair.first;
+                        std::string client_username = client_pair.second;
+                        if (client_username == getUsername(origin_sock) && client_sock != origin_sock) {
+                            cout << "Notificando deleção para cliente: " << client_sock << endl;
+                            FileInfo::send_cmd("delete", client_sock);
+                            FileInfo::send_file_name(file_name, client_sock);
+                        }
+                    }
+                }
+            }
+
+            i += sizeof(struct inotify_event) + event->len;
+        }
+    }
+
+    delete[] buffer;
+    inotify_rm_watch(fd, wd);
+    close(fd);
 }
 
 // Método que adiciona o cliente ao map

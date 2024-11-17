@@ -65,7 +65,7 @@ string FileInfo::receive_file(std::string directory, int sock)
     if (!outfile.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
-        return NULL;
+        return "";
     }
 
     int total_received_bytes = 0;
@@ -73,33 +73,27 @@ string FileInfo::receive_file(std::string directory, int sock)
     while (total_received_bytes < file_size)
     {
         // Recebe o header do pacote
-        size_t header_size = Packet::packet_base_size();
-        std::vector<uint8_t> header_buffer(header_size);
-
-        ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
+        size_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+        std::vector<uint8_t> packet_buffer(total_size);
+        
+        ssize_t received_bytes = recv(sock, packet_buffer.data(), total_size, 0);
         if (received_bytes <= 0)
         {
-            std::cerr << "Erro ao receber o header do pacote." << std::endl;
+            std::cerr << "Erro ao receber pacote." << std::endl;
             break;
         }
 
-        Packet packet = Packet::bytes_to_packet(header_buffer);
-        cout << "Pacote " << packet.get_seqn() << " de tamanho: " << received_bytes + packet.get_length() << " bytes recebido." << std::endl;
-        // Recebe o payload do pacote
-        uint16_t payload_length = packet.get_length();
-        if (payload_length > 0)
+        Packet packet = Packet::bytes_to_packet(packet_buffer);
+        
+        if (packet.get_type() == 2) // Verifica se é pacote de dados
         {
-            std::vector<char> payload_buffer(payload_length);
-            received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
-            if (received_bytes <= 0)
+            std::vector<char> payload = packet.get_payload();
+            if (!payload.empty())
             {
-                std::cerr << "Erro ao receber o payload do pacote." << std::endl;
-                break;
+                outfile.write(payload.data(), packet.get_length());
+                total_received_bytes += packet.get_length();
+                cout << "Recebidos " << total_received_bytes << " de " << file_size << " bytes" << endl;
             }
-
-            // Escreve o payload no arquivo
-            outfile.write(payload_buffer.data(), received_bytes);
-            total_received_bytes += received_bytes;
         }
     }
 
@@ -114,6 +108,7 @@ string FileInfo::receive_file(std::string directory, int sock)
     {
         std::cerr << "Transferência de arquivo incompleta. Esperando " << file_size
                   << " bytes mas recebeu " << total_received_bytes << " bytes." << std::endl;
+        return "";
     }
 }
 

@@ -111,13 +111,14 @@ void Client::handle_sync_request(int sock)
 void Client::handle_sync(int sock)
 {
     FileInfo::send_cmd("get_sync_dir", sock);
-    Client:monitor_sync_dir("sync_dir", sock);
+    monitor_sync_dir("sync_dir", sock); // Removido o Client: desnecessário
 }
 
 void Client::handle_upload_request()
 {    
     string file_name = FileInfo::receive_file("/sync_dir/", sock);
-    received_files.insert(file_name);
+    // Marca o arquivo como recebido do servidor
+    received_files[file_name] = 'S';
 }
 
 void Client::handle_delete_request()
@@ -172,23 +173,39 @@ void Client::monitor_sync_dir(string folder, int sock) {
             struct inotify_event *event = (struct inotify_event *) &buffer[i];
 
             if (event->len) {
+                string file_name = event->name;
+                
                 if (event->mask & IN_CLOSE_WRITE) {
-                    string file_name = event->name;
-                    if (received_files.find(file_name) != received_files.end()) {
-                        continue;
+                    // Verifica se o arquivo veio do servidor
+                    auto it = received_files.find(file_name);
+                    if (it != received_files.end()) {
+                        if (it->second == 'S') {
+                            // Remove a marca do servidor após processar
+                            received_files.erase(it);
+                            continue;
+                        }
                     }
-                        cout << "Arquivo pronto para envio: " << file_name << endl;
-                        FileInfo::send_cmd("upload", sock);
-                        FileInfo::send_file(sync_dir + "/" +  file_name, sock);
+                    
+                    cout << "Arquivo pronto para envio: " << file_name << endl;
+                    FileInfo::send_cmd("upload", sock);
+                    FileInfo::send_file(sync_dir + "/" + file_name, sock);
+                    // Marca como originado do cliente
+                    received_files[file_name] = 'C';
                 }
+                
                 if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
-                    if (received_files.find(event->name) == received_files.end()) {
-                        continue;
+                    auto it = received_files.find(file_name);
+                    if (it != received_files.end()) {
+                        if (it->second == 'S') {
+                            received_files.erase(it);
+                            continue;
+                        }
                     }
-                        string file_name = event->name;
-                        cout << "Arquivo deletado: " << file_name << endl;
-                        FileInfo::send_cmd("delete", sock);
-                        FileInfo::send_file_name(file_name, sock);
+                    
+                    cout << "Arquivo deletado: " << file_name << endl;
+                    FileInfo::send_cmd("delete", sock);
+                    FileInfo::send_file_name(file_name, sock);
+                    received_files.erase(file_name);
                 }
             }
 

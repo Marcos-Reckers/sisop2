@@ -48,6 +48,7 @@ private:
     void close_connection(int client_sock);
     void get_sync_dir(int client_sock);
     void handle_sync(int client_sock);
+    void monitor_sync_dir(std::string folder, int origin_sock);
 
 
 

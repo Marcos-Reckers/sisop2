@@ -32,6 +32,7 @@ int main(int argc, char const *argv[])
     else
     {
         std::cout << "Conectado ao servidor" << std::endl;
+        // Corrigir a criação das threads especificando o tipo da função membro
         std::thread send_sync_thread(&Client::handle_sync, &client, sock);
         std::thread receive_sync_thread(&Client::handle_sync_request, &client, sock);
         while (true)
@@ -81,7 +82,11 @@ int main(int argc, char const *argv[])
                 {
                     FileInfo::send_cmd("download", sock);
                     FileInfo::send_file_name(file_name, sock);
-                    FileInfo::receive_file("/downloads", sock);
+                    // Trocar a chamada atual por:
+                    string received_file = FileInfo::receive_file("/downloads", sock);
+                    if (!received_file.empty()) {
+                        cout << "Arquivo " << received_file << " baixado com sucesso" << endl;
+                    }
                 }
                 else
                 {
