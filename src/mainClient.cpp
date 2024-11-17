@@ -32,8 +32,7 @@ int main(int argc, char const *argv[])
     else
     {
         std::cout << "Conectado ao servidor" << std::endl;
-        std::thread send_sync_thread(&Client::handle_sync, &client, sock);
-        std::thread receive_sync_thread(&Client::handle_sync_request, &client, sock);
+        std::thread sync_thread(&Client::handle_sync, &client, sock);
         while (true)
         {
             std::string cmd;
@@ -97,7 +96,7 @@ int main(int argc, char const *argv[])
             else if (cmd.rfind("list_client", 0) == 0)
             {
                 std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-                std::string path = exec_path + "/sync_dir";
+                std::string path = exec_path + "/" + "sync_dir";
                 vector<FileInfo> files = FileInfo::list_files(path);
                 FileInfo::print_list_files(files);
             }
@@ -113,7 +112,7 @@ int main(int argc, char const *argv[])
             }
         }
 
-        send_sync_thread.join();
+        sync_thread.join();
         close(sock);
 
         return 0;

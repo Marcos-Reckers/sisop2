@@ -69,45 +69,6 @@ bool Client::end_connection()
     return false;
 }
 
-void Client::handle_sync_request(int sock)
-{
-    while (true)
-    {
-        ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
-        std::vector<uint8_t> packet_buffer(total_size);
-        ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
-
-        if (received_bytes < 0)
-        {
-            std::cerr << "Erro ao receber o pacote." << std::endl;
-            return;
-        }
-
-        Packet pkt = Packet::bytes_to_packet(packet_buffer);
-        pkt.print();
-
-        if (pkt.get_type() == 1)
-        {
-            std::vector<char> cmd_vec = pkt.get_payload();
-            std::string cmd(cmd_vec.begin(), cmd_vec.end());
-            std::cout << "Comando recebido: " << cmd << std::endl;
-            
-            if (cmd.substr(0, 6) == "upload")
-            {
-                handle_upload_request();
-            }
-            if (cmd.substr(0, 6) == "delete")
-            {
-                handle_delete_request();
-            }
-        }
-        else
-        {
-            std::cerr << "Pacote recebido não é do tipo 1." << std::endl;
-        }
-    }
-}
-
 void Client::handle_sync(int sock)
 {
     FileInfo::send_cmd("get_sync_dir", sock);
@@ -115,8 +76,39 @@ void Client::handle_sync(int sock)
 }
 
 void Client::handle_upload_request()
-{    
-    FileInfo::receive_file("/sync_dir/", sock);
+{
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string directory = exec_path + "sync_dir" + "/";
+    
+    FileInfo::receive_file(directory, sock);
+}
+
+void Client::handle_download_request()
+{
+    char file_name_buffer[256] = {0};
+    ssize_t received_bytes = recv(sock, file_name_buffer, sizeof(file_name_buffer), 0);
+
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string file_path = exec_path + "sync_dir" + "/" + file_name_buffer;
+    std::cout << "Arquivo a ser enviado: " << file_path << std::endl;
+
+    if (received_bytes <= 0)
+    {
+        std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
+        return;
+    }
+
+    if (!std::filesystem::exists(file_path))
+    {
+        std::cerr << "Arquivo não encontrado." << std::endl;
+        std::string error_msg = "ERROR: Arquivo não encontrado.";
+        Packet error_packet = Packet::create_packet_cmd(error_msg);
+        std::vector<uint8_t> error_packet_bytes = Packet::packet_to_bytes(error_packet);
+        send(sock, error_packet_bytes.data(), error_packet_bytes.size(), 0);
+        return;
+    }
+
+    FileInfo::send_file(file_path, sock);
 }
 
 void Client::handle_delete_request()
@@ -128,7 +120,9 @@ void Client::handle_delete_request()
         std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
         return;
     }
-    std::string path = "/sync_dir/" + std::string(file_name_buffer);
+
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string path = exec_path + "sync_dir" + "/" + file_name_buffer;
 
     FileInfo::delete_file(path, sock);
 }
