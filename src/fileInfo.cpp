@@ -236,65 +236,72 @@ void FileInfo::send_list_files(vector<FileInfo> files, int socket)
     {
         Packet packet = Packet::create_packet_info(file);
         std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-        ssize_t sent_bytes = sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
+        ssize_t sent_bytes = send(socket, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (sent_bytes < 0)
         {
             std::cerr << "Erro ao enviar informações do arquivo." << std::endl;
+            return;
         }
-        packet.print();
+        
+        // Pequeno delay para evitar sobrecarregar o buffer
+        usleep(1000);
     }
-    Packet packet = Packet::create_packet_cmd("END_OF_LIST");
-    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-    ssize_t sent_bytes = sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
 
-    if (sent_bytes < 0)
-    {
-        std::cerr << "Erro ao enviar informações do arquivo." << std::endl;
-    }
+    // Envia pacote de finalização
+    Packet end_packet = Packet::create_packet_cmd("END_OF_LIST");
+    std::vector<uint8_t> end_bytes = Packet::packet_to_bytes(end_packet);
+    send(socket, end_bytes.data(), end_bytes.size(), 0);
 }
 
 vector<FileInfo> FileInfo::receive_list_files(int sock)
 {
     std::vector<FileInfo> files = {};
+    size_t timeout_count = 0;
+    const size_t MAX_TIMEOUTS = 10;
 
-    while (true)
+    while (timeout_count < MAX_TIMEOUTS)
     {
-        // Recebe o header do pacote
-        size_t header_size = Packet::packet_base_size();
-        std::vector<uint8_t> header_buffer(header_size);
+        // Configura timeout para o recv
+        struct timeval tv;
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-        ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
+        size_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+        std::vector<uint8_t> packet_buffer(total_size);
+        
+        ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
         if (received_bytes <= 0)
         {
-            std::cerr << "Erro ao receber o header do pacote." << std::endl;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                timeout_count++;
+                continue;
+            }
             break;
         }
 
-        Packet packet = Packet::bytes_to_packet(header_buffer);
-
-        // Recebe o payload do pacote, se houver
-        uint16_t payload_length = packet.get_length();
-        if (payload_length > 0)
-        {
-            std::vector<char> payload_buffer(payload_length);
-            received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
-            if (received_bytes <= 0)
-            {
-                std::cerr << "Erro ao receber o payload do pacote." << std::endl;
-                break;
-            }
-            packet.set_payload(payload_buffer);
-        }
-
+        timeout_count = 0; // Reseta o contador se recebeu dados
+        Packet packet = Packet::bytes_to_packet(packet_buffer);
+        
         if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_LIST")
         {
             break;
         }
-
-        FileInfo file_info = Packet::string_to_info(packet.get_payload());
-        files.push_back(file_info);
+        
+        if (packet.get_type() == 3)
+        {
+            FileInfo file_info = Packet::string_to_info(packet.get_payload());
+            files.push_back(file_info);
+        }
     }
+
+    // Restaura o socket para modo bloqueante
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     return files;
 }

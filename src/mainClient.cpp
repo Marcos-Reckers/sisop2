@@ -96,8 +96,13 @@ int main(int argc, char const *argv[])
             else if (cmd.rfind("list_server", 0) == 0)
             {
                 FileInfo::send_cmd("list_server", sock);
-                FileInfo::print_list_files(FileInfo::receive_list_files(sock));
-                
+                vector<FileInfo> files = FileInfo::receive_list_files(sock);
+                if (!files.empty()) {
+                    cout << "\nArquivos no servidor:" << endl;
+                    FileInfo::print_list_files(files);
+                } else {
+                    cout << "Nenhum arquivo encontrado no servidor." << endl;
+                }
             }
             else if (cmd.rfind("list_client", 0) == 0)
             {
