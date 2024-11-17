@@ -92,17 +92,10 @@ void Server::acceptClients()
     }
 }
 
-void Server::get_sync_dir(int client_fd)
-{
-    std::string username = getUsername(client_fd);
-    std::string dir_path = "users/sync_dir_" + username;
-    FileInfo::create_dir(dir_path);
-}
 
 void Server::handle_sync(int sock)
 {
-    string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    string path = exec_path + "sync_dir_" + getUsername(sock);
+    string path = "/users/sync_dir_" + getUsername(sock);
     FileInfo::monitor_sync_dir(path, sock);
 }
 
@@ -205,8 +198,8 @@ void Server::handleRequest(int client_sock)
             }
             if (cmd.substr(0, 12) == "get_sync_dir")
             {
-                get_sync_dir(client_sock);
-                //sync_client_dir(client_sock);
+                std::thread sync_thread(&Server::handle_sync, this, client_sock);
+                sync_thread.detach();
                 cout << "get_sync_dir criado e sincronização implementada" << endl;
             }
             if (cmd.substr(0, 4) == "exit")
