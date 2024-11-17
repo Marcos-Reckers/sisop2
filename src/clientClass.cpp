@@ -125,8 +125,3 @@ void Client::handle_delete_request()
 
     FileInfo::delete_file(path, sock);
 }
-
-
-
-
-

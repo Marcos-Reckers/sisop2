@@ -65,7 +65,7 @@ public:
     void static print_list_files(vector<FileInfo> files);
     void static delete_file(string file_path, int sock);
     void static send_file_name(string file_path, int sock);
-    void static receive_list_files(int sock);
+    vector<FileInfo> static receive_list_files(int sock);
     void static send_cmd(std::string cmd, int sock);
     void static monitor_sync_dir(string folder, int sock);
 

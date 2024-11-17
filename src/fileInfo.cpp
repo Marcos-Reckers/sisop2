@@ -240,7 +240,7 @@ void FileInfo::send_list_files(vector<FileInfo> files, int socket)
     {
         Packet packet = Packet::create_packet_info(file);
         std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-        ssize_t sent_bytes = send(socket, packet_bytes.data(), packet_bytes.size(), 0);
+        ssize_t sent_bytes = sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (sent_bytes < 0)
         {
@@ -250,7 +250,7 @@ void FileInfo::send_list_files(vector<FileInfo> files, int socket)
     }
     Packet packet = Packet::create_packet_cmd("END_OF_LIST");
     std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-    ssize_t sent_bytes = send(socket, packet_bytes.data(), packet_bytes.size(), 0);
+    ssize_t sent_bytes = sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
 
     if (sent_bytes < 0)
     {
@@ -258,21 +258,38 @@ void FileInfo::send_list_files(vector<FileInfo> files, int socket)
     }
 }
 
-void FileInfo::receive_list_files(int sock)
+vector<FileInfo> FileInfo::receive_list_files(int sock)
 {
     std::vector<FileInfo> files = {};
+
     while (true)
     {
-        std::vector<uint8_t> packet_buffer(Packet::packet_base_size() + MAX_PAYLOAD_SIZE);
-        //ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
-        ssize_t received_bytes = recvAll(sock, packet_buffer.data(), packet_buffer.size(), 0);
+        // Recebe o header do pacote
+        size_t header_size = Packet::packet_base_size();
+        std::vector<uint8_t> header_buffer(header_size);
+
+        ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
         if (received_bytes <= 0)
         {
-            std::cerr << "Erro ao receber o pacote:" << std::endl;
-            return;
+            std::cerr << "Erro ao receber o header do pacote." << std::endl;
+            break;
         }
 
-        Packet packet = Packet::bytes_to_packet(packet_buffer);
+        Packet packet = Packet::bytes_to_packet(header_buffer);
+
+        // Recebe o payload do pacote, se houver
+        uint16_t payload_length = packet.get_length();
+        if (payload_length > 0)
+        {
+            std::vector<char> payload_buffer(payload_length);
+            received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
+            if (received_bytes <= 0)
+            {
+                std::cerr << "Erro ao receber o payload do pacote." << std::endl;
+                break;
+            }
+            packet.set_payload(payload_buffer);
+        }
 
         if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_LIST")
         {
@@ -283,9 +300,7 @@ void FileInfo::receive_list_files(int sock)
         files.push_back(file_info);
     }
 
-    print_list_files(files);
-
-    return;
+    return files;
 }
 
 void FileInfo::print_list_files(vector<FileInfo> files)

@@ -90,8 +90,8 @@ int main(int argc, char const *argv[])
             else if (cmd.rfind("list_server", 0) == 0)
             {
                 FileInfo::send_cmd("list_server", sock);
-                FileInfo::receive_list_files(sock);
-                std::cout << std::endl;
+                FileInfo::print_list_files(FileInfo::receive_list_files(sock));
+                
             }
             else if (cmd.rfind("list_client", 0) == 0)
             {
