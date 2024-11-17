@@ -45,14 +45,14 @@ void FileInfo::create_dir(string dir_name)
     }
 }
 
-void FileInfo::receive_file(string directory, int sock)
+void FileInfo::receive_file(std::string directory, int sock)
 {
     std::cout << "Recebendo informações do arquivo..." << std::endl;
 
     FileInfo file_info = receive_file_info(sock);
     file_info.print();
 
-    string file_name = file_info.get_file_name();
+    std::string file_name = file_info.get_file_name();
     int file_size = file_info.get_file_size();
 
     create_dir(directory);
@@ -68,34 +68,39 @@ void FileInfo::receive_file(string directory, int sock)
         return;
     }
 
-    ssize_t received_bytes = 0;
     int total_received_bytes = 0;
+
     while (total_received_bytes < file_size)
     {
-        ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+        // Recebe o header do pacote
+        size_t header_size = Packet::packet_base_size();
+        std::vector<uint8_t> header_buffer(header_size);
 
-        std::vector<uint8_t> packet_buffer(total_size);
-
-        received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+        ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
         if (received_bytes <= 0)
         {
-            std::cerr << "Erro ao receber o pacote:" << std::endl;
+            std::cerr << "Erro ao receber o header do pacote." << std::endl;
             break;
         }
 
-        Packet packet = Packet::bytes_to_packet(packet_buffer);
+        Packet packet = Packet::bytes_to_packet(header_buffer);
 
-        if (packet.get_type() == 1 && packet.get_payload_as_string().substr(0, 5) == "ERROR")
+        // Recebe o payload do pacote
+        uint16_t payload_length = packet.get_length();
+        if (payload_length > 0)
         {
-            std::cerr << "Erro do servidor: " << packet.get_payload_as_string() << std::endl;
-            return;
+            std::vector<char> payload_buffer(payload_length);
+            received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
+            if (received_bytes <= 0)
+            {
+                std::cerr << "Erro ao receber o payload do pacote." << std::endl;
+                break;
+            }
+
+            // Escreve o payload no arquivo
+            outfile.write(payload_buffer.data(), received_bytes);
+            total_received_bytes += received_bytes;
         }
-
-        outfile.write(packet.get_payload().data(), packet.get_length());
-
-        total_received_bytes += packet.get_length();
-
-        std::cout << "Pacote recebido de tamanho: " << received_bytes << " bytes." << std::endl;
     }
 
     outfile.close();
@@ -106,23 +111,41 @@ void FileInfo::receive_file(string directory, int sock)
     }
     else
     {
-        std::cerr << "Transferência de arquivo incompleta. Esperando " << file_size << " bytes mas recebeu " << total_received_bytes << " bytes." << std::endl;
+        std::cerr << "Transferência de arquivo incompleta. Esperando " << file_size
+                  << " bytes mas recebeu " << total_received_bytes << " bytes." << std::endl;
     }
 }
 
 FileInfo FileInfo::receive_file_info(int sock)
 {
-    std::vector<uint8_t> packet_buffer(Packet::packet_base_size() + MAX_PAYLOAD_SIZE);
-    ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+    // Recebe o header do pacote
+    size_t header_size = Packet::packet_base_size();
+    std::vector<uint8_t> header_buffer(header_size);
+
+    ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
     if (received_bytes <= 0)
     {
-        std::cerr << "Erro ao receber o pacote:" << std::endl;
+        std::cerr << "Erro ao receber o header do pacote." << std::endl;
         return FileInfo();
     }
 
-    Packet packet = Packet::bytes_to_packet(packet_buffer);
-    packet.print();
+    Packet packet = Packet::bytes_to_packet(header_buffer);
 
+    // Recebe o payload do pacote
+    uint16_t payload_length = packet.get_length();
+    if (payload_length > 0)
+    {
+        std::vector<char> payload_buffer(payload_length);
+        received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
+        if (received_bytes <= 0)
+        {
+            std::cerr << "Erro ao receber o payload do pacote." << std::endl;
+            return FileInfo();
+        }
+        packet.set_payload(payload_buffer);
+    }
+
+    // Converte o payload em FileInfo
     FileInfo file_info = Packet::string_to_info(packet.get_payload());
     return file_info;
 }
@@ -144,7 +167,8 @@ void FileInfo::send_file(string file_path, int sock)
     {
         std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
 
-        ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
+        //ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
+        ssize_t sent_bytes = sendAll(sock, packet_bytes.data(), packet_bytes.size(), 0);
         if (sent_bytes < 0)
         {
             std::cout << "Erro ao enviar pacote." << std::endl;
@@ -240,7 +264,8 @@ void FileInfo::receive_list_files(int sock)
     while (true)
     {
         std::vector<uint8_t> packet_buffer(Packet::packet_base_size() + MAX_PAYLOAD_SIZE);
-        ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+        //ssize_t received_bytes = recv(sock, packet_buffer.data(), packet_buffer.size(), 0);
+        ssize_t received_bytes = recvAll(sock, packet_buffer.data(), packet_buffer.size(), 0);
         if (received_bytes <= 0)
         {
             std::cerr << "Erro ao receber o pacote:" << std::endl;
@@ -368,4 +393,32 @@ void FileInfo::send_cmd(std::string cmd, int sock)
     }
 
     std::cout << "Comando enviado como pacote: " << cmd << std::endl;
+}
+
+ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
+{
+    size_t total = 0;
+    const char *ptr = (const char *)buf;
+    while (total < len)
+    {
+        ssize_t sent = send(sockfd, ptr + total, len - total, flags);
+        if (sent <= 0)
+            return sent;
+        total += sent;
+    }
+    return total;
+}
+
+ssize_t FileInfo::recvAll(int sockfd, void *buf, size_t len, int flags)
+{
+    size_t total = 0;
+    char *ptr = (char *)buf;
+    while (total < len)
+    {
+        ssize_t received = recv(sockfd, ptr + total, len - total, flags);
+        if (received <= 0)
+            return received;
+        total += received;
+    }
+    return total;
 }

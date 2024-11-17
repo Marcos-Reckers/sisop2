@@ -68,6 +68,9 @@ public:
     void static receive_list_files(int sock);
     void static send_cmd(std::string cmd, int sock);
     void static monitor_sync_dir(string folder, int sock);
+
+    static ssize_t sendAll(int sockfd, const void *buf, size_t len, int flags);
+    static ssize_t recvAll(int sockfd, void *buf, size_t len, int flags);
 };
 
 #endif // FILEINFO_H
