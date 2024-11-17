@@ -111,12 +111,13 @@ void Client::handle_sync_request(int sock)
 void Client::handle_sync(int sock)
 {
     FileInfo::send_cmd("get_sync_dir", sock);
-    FileInfo::monitor_sync_dir("sync_dir", sock);
+    Client:monitor_sync_dir("sync_dir", sock);
 }
 
 void Client::handle_upload_request()
 {    
-    FileInfo::receive_file("/sync_dir/", sock);
+    string file_name = FileInfo::receive_file("/sync_dir/", sock);
+    received_files.insert(file_name);
 }
 
 void Client::handle_delete_request()
@@ -128,7 +129,74 @@ void Client::handle_delete_request()
         std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
         return;
     }
-    std::string path = "/sync_dir/" + std::string(file_name_buffer);
+
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();\
+    std::string path = exec_path + "/sync_dir/" + std::string(file_name_buffer);
+    cout << path << " deletado" << endl;
 
     FileInfo::delete_file(path, sock);
+}
+
+void Client::monitor_sync_dir(string folder, int sock) {
+
+    FileInfo::create_dir(folder);
+    
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string sync_dir = exec_path + "/" + folder;
+
+    int fd = inotify_init();
+    if (fd < 0) {
+        perror("inotify_init");
+        return;
+    }
+
+    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM);
+    if (wd < 0) {
+        perror("inotify_add_watch");
+        close(fd);
+        return;
+    }
+
+    const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
+    char *buffer = new char[buf_size];
+
+    while (true) {
+        int length = read(fd, buffer, buf_size);
+        if (length < 0) {
+            perror("read");
+            break;
+        }
+
+        int i = 0;
+        while (i < length) {
+            struct inotify_event *event = (struct inotify_event *) &buffer[i];
+
+            if (event->len) {
+                if (event->mask & IN_CLOSE_WRITE) {
+                    string file_name = event->name;
+                    if (received_files.find(file_name) != received_files.end()) {
+                        continue;
+                    }
+                        cout << "Arquivo pronto para envio: " << file_name << endl;
+                        FileInfo::send_cmd("upload", sock);
+                        FileInfo::send_file(sync_dir + "/" +  file_name, sock);
+                }
+                if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
+                    if (received_files.find(event->name) == received_files.end()) {
+                        continue;
+                    }
+                        string file_name = event->name;
+                        cout << "Arquivo deletado: " << file_name << endl;
+                        FileInfo::send_cmd("delete", sock);
+                        FileInfo::send_file_name(file_name, sock);
+                }
+            }
+
+            i += sizeof(struct inotify_event) + event->len;
+        }
+    }
+
+    delete[] buffer;
+    inotify_rm_watch(fd, wd);
+    close(fd);
 }

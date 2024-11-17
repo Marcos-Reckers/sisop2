@@ -45,7 +45,7 @@ void FileInfo::create_dir(string dir_name)
     }
 }
 
-void FileInfo::receive_file(std::string directory, int sock)
+string FileInfo::receive_file(std::string directory, int sock)
 {
     std::cout << "Recebendo informações do arquivo..." << std::endl;
 
@@ -65,7 +65,7 @@ void FileInfo::receive_file(std::string directory, int sock)
     if (!outfile.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
-        return;
+        return NULL;
     }
 
     int total_received_bytes = 0;
@@ -108,6 +108,7 @@ void FileInfo::receive_file(std::string directory, int sock)
     if (total_received_bytes == file_size)
     {
         std::cout << "Arquivo recebido com sucesso." << std::endl;
+        return file_name;
     }
     else
     {
@@ -378,6 +379,7 @@ void FileInfo::monitor_sync_dir(string folder, int sock) {
                         cout << "Arquivo deletado: " << file_name << endl;
                         FileInfo::send_cmd("delete", sock);
                         FileInfo::send_file_name(file_name, sock);
+                        cout << file_name << " deletado" << endl;
                 }
             }
 

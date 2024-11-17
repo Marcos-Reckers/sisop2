@@ -75,6 +75,7 @@
     "netfwd": "cpp",
     "socket": "cpp",
     "future": "cpp",
-    "regex": "cpp"
+    "regex": "cpp",
+    "set": "cpp"
   }
 }

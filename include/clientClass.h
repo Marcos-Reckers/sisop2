@@ -2,6 +2,7 @@
 #define CLIENTCLASS_H
 
 #include "fileInfo.h"
+#include <set>
 
 
 using namespace std;
@@ -12,6 +13,7 @@ class Client
         string username;
         struct hostent* server;
         string server_port;
+        set<string> received_files;
 
         int sock;
 
@@ -31,6 +33,7 @@ class Client
         void handle_sync_request(int sock);
 
         void set_sock(int sock);
+        void monitor_sync_dir(string folder, int sock);
 };
 
 
