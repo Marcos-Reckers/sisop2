@@ -250,6 +250,7 @@ void Client::handle_delete_request()
     cout << "Arquivo a ser deletado: " << path << endl;
 
     FileInfo::delete_file(path, sock);
+    synced_files.insert(file_name_buffer);
 }
 
 void Client::monitor_sync_dir(string folder)
@@ -311,10 +312,18 @@ void Client::monitor_sync_dir(string folder)
                 }
                 if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM)
                 {
-                    string file_name = event->name;
-                    cout << "Arquivo deletado: " << file_name << endl;
-                    FileInfo::send_cmd("delete", sock);
-                    FileInfo::send_file_name(file_name, sock);
+                    if (synced_files.find(event->name) != synced_files.end())
+                    {
+                        synced_files.erase(event->name);
+                        break;
+                    }
+                    else if (synced_files.find(event->name) == synced_files.end())
+                    {
+                        string file_name = event->name;
+                        cout << "Arquivo deletado: " << file_name << endl;
+                        FileInfo::send_cmd("delete", sock);
+                        FileInfo::send_file_name(file_name, sock);
+                    }
                 }
             }
             i += sizeof(struct inotify_event) + event->len;
