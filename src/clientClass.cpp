@@ -84,14 +84,18 @@ void Client::handle_sync_request(int sock)
         }
 
         Packet pkt = Packet::bytes_to_packet(packet_buffer);
-        pkt.print();
 
         if (pkt.get_type() == 1)
         {
             std::vector<char> cmd_vec = pkt.get_payload();
             std::string cmd(cmd_vec.begin(), cmd_vec.end());
-            std::cout << "Comando recebido: " << cmd << std::endl;
             
+            auto now = std::chrono::steady_clock::now();
+            if ((now - last_sync) < std::chrono::seconds(1)) {
+                continue;
+            }
+            
+            std::cout << "Comando recebido: " << cmd << std::endl;
             if (cmd.substr(0, 6) == "upload")
             {
                 handle_upload_request();
@@ -100,10 +104,6 @@ void Client::handle_sync_request(int sock)
             {
                 handle_delete_request();
             }
-        }
-        else
-        {
-            std::cerr << "Pacote recebido não é do tipo 1." << std::endl;
         }
     }
 }
@@ -117,8 +117,11 @@ void Client::handle_sync(int sock)
 void Client::handle_upload_request()
 {    
     string file_name = FileInfo::receive_file("/sync_dir/", sock);
-    // Marca o arquivo como recebido do servidor
-    received_files[file_name] = 'S';
+    if (!file_name.empty()) {
+        // Marca o arquivo como recebido do servidor e adiciona timestamp
+        received_files[file_name] = 'S';
+        last_sync = std::chrono::steady_clock::now();
+    }
 }
 
 void Client::handle_delete_request()
@@ -174,22 +177,26 @@ void Client::monitor_sync_dir(string folder, int sock) {
 
             if (event->len) {
                 string file_name = event->name;
+                auto now = std::chrono::steady_clock::now();
                 
+                // Ignora eventos muito próximos ao último upload
+                if ((now - last_upload) < std::chrono::seconds(2)) {
+                    i += sizeof(struct inotify_event) + event->len;
+                    continue;
+                }
+
                 if (event->mask & IN_CLOSE_WRITE) {
-                    // Verifica se o arquivo veio do servidor
+                    // Verifica se o arquivo veio do servidor recentemente
                     auto it = received_files.find(file_name);
-                    if (it != received_files.end()) {
-                        if (it->second == 'S') {
-                            // Remove a marca do servidor após processar
-                            received_files.erase(it);
-                            continue;
-                        }
+                    if (it != received_files.end() && it->second == 'S' && 
+                        (now - last_sync) < std::chrono::seconds(1)) {
+                        continue;
                     }
                     
                     cout << "Arquivo pronto para envio: " << file_name << endl;
                     FileInfo::send_cmd("upload", sock);
                     FileInfo::send_file(sync_dir + "/" + file_name, sock);
-                    // Marca como originado do cliente
+                    last_upload = std::chrono::steady_clock::now();
                     received_files[file_name] = 'C';
                 }
                 

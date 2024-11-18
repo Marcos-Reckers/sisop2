@@ -51,6 +51,11 @@ int main(int argc, char const *argv[])
                     {
                         FileInfo::send_cmd("upload", sock);
                         FileInfo::send_file(file_path, sock);
+                        // Aguarda o arquivo retornar do servidor para o sync_dir
+                        string received_file = FileInfo::receive_file("/sync_dir", sock);
+                        if (!received_file.empty()) {
+                            cout << "Arquivo sincronizado localmente em sync_dir/" << received_file << endl;
+                        }
                     }
                     else
                     {
@@ -99,7 +104,9 @@ int main(int argc, char const *argv[])
                 vector<FileInfo> files = FileInfo::receive_list_files(sock);
                 if (!files.empty()) {
                     cout << "\nArquivos no servidor:" << endl;
+                    cout << "----------------------------------------" << endl;
                     FileInfo::print_list_files(files);
+                    cout << "----------------------------------------" << endl;
                 } else {
                     cout << "Nenhum arquivo encontrado no servidor." << endl;
                 }

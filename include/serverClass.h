@@ -2,7 +2,8 @@
 #define SERVERCLASS_H
 
 #include "fileInfo.h"
-
+#include <mutex>
+#include <chrono>
 
 class Server
 {
@@ -13,6 +14,8 @@ private:
     std::vector<std::thread> client_threads; // Vetor para armazenar threads de clientes
     std::map<int, std::string> clients;      // Map para armazenar os clientes conectados
     std::map<std::string, std::unique_ptr<sem_t>> active;
+    std::map<std::string, std::vector<int>> user_sessions; // Mapa de usuário para seus sockets ativos
+    std::mutex broadcast_mutex;              // Adiciona mutex como membro da classe
 
     public :
     // Construtor que inicializa o servidor com uma porta específica
@@ -49,8 +52,7 @@ private:
     void get_sync_dir(int client_sock);
     void handle_sync(int client_sock);
     void monitor_sync_dir(std::string folder, int origin_sock);
-
-
+    void broadcast_to_user(std::string username, std::string file_name, std::string command, int origin_sock);
 
     // Getters
     int getServerFd() const;

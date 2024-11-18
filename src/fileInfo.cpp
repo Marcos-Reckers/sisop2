@@ -257,17 +257,16 @@ void FileInfo::send_list_files(vector<FileInfo> files, int socket)
 vector<FileInfo> FileInfo::receive_list_files(int sock)
 {
     std::vector<FileInfo> files = {};
-    size_t timeout_count = 0;
-    const size_t MAX_TIMEOUTS = 10;
+    bool end_received = false;
 
-    while (timeout_count < MAX_TIMEOUTS)
+    // Remove timeout temporário para garantir recebimento completo
+    struct timeval tv;
+    tv.tv_sec = 5;  // 5 segundos de timeout
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+    while (!end_received)
     {
-        // Configura timeout para o recv
-        struct timeval tv;
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-
         size_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_buffer(total_size);
         
@@ -276,29 +275,32 @@ vector<FileInfo> FileInfo::receive_list_files(int sock)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                timeout_count++;
-                continue;
+                break;  // Timeout - assumimos que a lista terminou
             }
+            std::cerr << "Erro ao receber lista de arquivos" << std::endl;
             break;
         }
 
-        timeout_count = 0; // Reseta o contador se recebeu dados
         Packet packet = Packet::bytes_to_packet(packet_buffer);
         
         if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_LIST")
         {
-            break;
+            end_received = true;
+            continue;
         }
         
-        if (packet.get_type() == 3)
+        if (packet.get_type() == 3)  // Pacote de informação de arquivo
         {
-            FileInfo file_info = Packet::string_to_info(packet.get_payload());
-            files.push_back(file_info);
+            try {
+                FileInfo file_info = Packet::string_to_info(packet.get_payload());
+                files.push_back(file_info);
+            } catch (const std::exception& e) {
+                std::cerr << "Erro ao processar informações do arquivo: " << e.what() << std::endl;
+            }
         }
     }
 
     // Restaura o socket para modo bloqueante
-    struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);

@@ -17,6 +17,8 @@ class Client
 
         // Mapa para rastrear arquivos recebidos e sua origem (S=servidor, C=cliente)
         std::map<std::string, char> received_files;
+        std::chrono::steady_clock::time_point last_sync;
+        std::chrono::steady_clock::time_point last_upload; // Adicionar essa linha
 
     public:
 

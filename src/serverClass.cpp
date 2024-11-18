@@ -1,4 +1,7 @@
 #include "serverClass.h"
+#include <mutex>
+#include <chrono>
+#include <thread>
 
 // Construtor da classe que recebe a porta como argumento
 Server::Server(int port) : server_fd(-1), port(port)
@@ -135,32 +138,18 @@ void Server::monitor_sync_dir(std::string folder, int origin_sock)
             struct inotify_event *event = (struct inotify_event *) &buffer[i];
 
             if (event->len) {
+                string file_name = event->name;
+                std::string username = getUsername(origin_sock);
+
                 if (event->mask & IN_CLOSE_WRITE) {
-                    string file_name = event->name;
-                    for (auto &client_pair : clients) {
-                        int client_sock = client_pair.first;
-                        std::string client_username = client_pair.second;
-                        if (client_username == getUsername(origin_sock) && client_sock != origin_sock) {
-                            cout << "Enviando arquivo para cliente: " << client_sock << endl;
-                            FileInfo::send_cmd("upload", client_sock);
-                            FileInfo::send_file(sync_dir + "/" + file_name, client_sock);
-                        }
-                    }
+                    cout << "Arquivo modificado: " << file_name << endl;
+                    broadcast_to_user(username, file_name, "upload", origin_sock);
                 }
                 if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
-                    string file_name = event->name;
-                    for (auto &client_pair : clients) {
-                        int client_sock = client_pair.first;
-                        std::string client_username = client_pair.second;
-                        if (client_username == getUsername(origin_sock) && client_sock != origin_sock) {
-                            cout << "Notificando deleção para cliente: " << client_sock << endl;
-                            FileInfo::send_cmd("delete", client_sock);
-                            FileInfo::send_file_name(file_name, client_sock);
-                        }
-                    }
+                    cout << "Arquivo deletado: " << file_name << endl;
+                    broadcast_to_user(username, file_name, "delete", origin_sock);
                 }
             }
-
             i += sizeof(struct inotify_event) + event->len;
         }
     }
@@ -174,12 +163,61 @@ void Server::monitor_sync_dir(std::string folder, int origin_sock)
 void Server::addClient(int client_fd, std::string username)
 {
     clients[client_fd] = username;
-    // client_sockets.insert(username, client_fd);
+    user_sessions[username].push_back(client_fd);
 }
 
 void Server::removeClient(int client_fd)
 {
+    std::string username = clients[client_fd];
+    auto& sessions = user_sessions[username];
+    sessions.erase(std::remove(sessions.begin(), sessions.end(), client_fd), sessions.end());
+    if (sessions.empty()) {
+        user_sessions.erase(username);
+    }
     clients.erase(client_fd);
+}
+
+void Server::broadcast_to_user(std::string username, std::string file_name, std::string command, int origin_sock)
+{
+    if (user_sessions.find(username) == user_sessions.end()) {
+        return;
+    }
+
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string sync_dir = exec_path + "/users/sync_dir_" + username;
+
+    std::lock_guard<std::mutex> lock(broadcast_mutex);
+    static std::map<std::string, std::chrono::steady_clock::time_point> last_broadcast;
+    auto now = std::chrono::steady_clock::now();
+    
+    // Verifica se já fez broadcast deste arquivo recentemente
+    std::string key = username + "_" + file_name + "_" + command;
+    if (last_broadcast.find(key) != last_broadcast.end()) {
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_broadcast[key]).count() < 2) {
+            return;
+        }
+    }
+    last_broadcast[key] = now;
+
+    for (int client_sock : user_sessions[username]) {
+        if (client_sock != origin_sock) {
+            try {
+                FileInfo::send_cmd(command, client_sock);
+                if (command == "upload") {
+                    std::string file_path = sync_dir + "/" + file_name;
+                    if (std::filesystem::exists(file_path)) {
+                        FileInfo::send_file(file_path, client_sock);
+                    }
+                } else if (command == "delete") {
+                    FileInfo::send_file_name(file_name, client_sock);
+                }
+                // Pequeno delay para garantir que os pacotes sejam processados na ordem correta
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            } catch (const std::exception& e) {
+                std::cerr << "Erro ao enviar para cliente " << client_sock << ": " << e.what() << std::endl;
+            }
+        }
+    }
 }
 
 std::string Server::getUsername(int client_fd)
@@ -346,8 +384,18 @@ void Server::handle_upload_request(int client_sock)
     std::string username = getUsername(client_sock);
     std::string directory = "users/sync_dir_" + username + "/";
     
-    FileInfo::receive_file(directory, client_sock);
-    
+    std::string received_file = FileInfo::receive_file(directory, client_sock);
+    if (!received_file.empty()) {
+        // Envia o arquivo de volta para o cliente que fez o upload
+        std::string file_path = std::filesystem::canonical("/proc/self/exe").parent_path().string() 
+                               + "/" + directory + received_file;
+        if (std::filesystem::exists(file_path)) {
+            FileInfo::send_file(file_path, client_sock);
+        }
+        
+        // Broadcast para outros clientes
+        broadcast_to_user(username, received_file, "upload", client_sock);
+    }
 }
 
 void Server::handle_list_request(int client_sock)
@@ -357,8 +405,12 @@ void Server::handle_list_request(int client_sock)
     std::string path = exec_path + "/users/sync_dir_" + username;
 
     cout << "Listando arquivos do diretório: " << path << endl;
+    FileInfo::create_dir("users/sync_dir_" + username);
 
     std::vector<FileInfo> files = FileInfo::list_files(path);
+    if (files.empty()) {
+        cout << "Diretório vazio" << endl;
+    }
     FileInfo::send_list_files(files, client_sock);
 }
 
