@@ -104,7 +104,7 @@ void Client::get_sync_dir()
         cout << "Enviando arquivo: " << send_path << endl;
         FileInfo::send_file(send_path, sock);
 
-        sleep(3);
+        sleep(2);
     }
 
     vector<FileInfo> files_to_download;
@@ -135,6 +135,8 @@ void Client::get_sync_dir()
         FileInfo::send_cmd("download", sock);
         FileInfo::send_file_name(file.get_file_name(), sock);
         FileInfo::receive_file("/sync_dir", sock);
+
+        sleep(2);
     }
 }
 
@@ -244,7 +246,8 @@ void Client::handle_delete_request()
     }
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    std::string path = exec_path + "sync_dir" + "/" + file_name_buffer;
+    std::string path = exec_path + "/sync_dir/" + file_name_buffer;
+    cout << "Arquivo a ser deletado: " << path << endl;
 
     FileInfo::delete_file(path, sock);
 }

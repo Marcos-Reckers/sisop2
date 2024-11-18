@@ -83,8 +83,8 @@ void Server::acceptClients()
             client_threads.emplace_back(&Server::handleRequest, this, client_fd);
             std::cout << "Conexão aceita de: " << username_str << std::endl;
 
-            std::thread sync_thread(&FileInfo::monitor_sync_dir, "users/sync_dir_" + username_str, client_fd);
-            sync_thread.detach();
+            // std::thread sync_thread(&FileInfo::monitor_sync_dir, "users/sync_dir_" + username_str, client_fd);
+            // sync_thread.detach();
         }
     }
 }
@@ -243,6 +243,14 @@ void Server::handle_delete_request(int client_sock)
     std::string path = exec_path + "/users/sync_dir_" + username + "/" + file_name_buffer;
 
     FileInfo::delete_file(path, client_sock);
+    
+    for (const auto& client : clients) {
+        if (client.second == username) {
+            FileInfo::send_cmd("delete", client.first);
+            FileInfo::send_file_name(file_name_buffer, client.first);
+        }
+    }
+
 }
 
 void Server::handle_download_request(int client_sock)
@@ -279,8 +287,16 @@ void Server::handle_upload_request(int client_sock)
     std::string username = getUsername(client_sock);
     std::string directory = "users/sync_dir_" + username + "/";
     
-    FileInfo::receive_file(directory, client_sock);
-    
+    string file_name = FileInfo::receive_file(directory, client_sock);
+
+    string new_path = directory + file_name;
+
+    for (const auto& client : clients) {
+        if (client.second == username) {
+            FileInfo::send_cmd("upload", client.first);
+            FileInfo::send_file(new_path, client.first);
+        }
+    }
 }
 
 void Server::handle_list_request(int client_sock)

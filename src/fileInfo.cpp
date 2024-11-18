@@ -375,12 +375,12 @@ void FileInfo::monitor_sync_dir(string folder, int sock) {
                         FileInfo::send_cmd("upload", sock);
                         FileInfo::send_file(sync_dir + "/" +  file_name, sock);
                 }
-                if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
-                    string file_name = event->name;
-                        cout << "Arquivo deletado: " << file_name << endl;
-                        FileInfo::send_cmd("delete", sock);
-                        FileInfo::send_file_name(file_name, sock);
-                }
+                // if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
+                //     string file_name = event->name;
+                //         cout << "Arquivo deletado: " << file_name << endl;
+                //         FileInfo::send_cmd("delete", sock);
+                //         FileInfo::send_file_name(file_name, sock);
+                // }
             }
 
             i += sizeof(struct inotify_event) + event->len;
