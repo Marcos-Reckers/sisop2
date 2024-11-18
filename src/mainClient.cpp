@@ -33,7 +33,6 @@ int main(int argc, char const *argv[])
     {
         std::cout << "Conectado ao servidor" << std::endl;
         client.get_sync_dir();
-        std::thread handle_server_request_thread(&Client::handle_sync, &client);
         std::thread sync_thread(&Client::monitor_sync_dir, &client, "sync_dir");
         while (true)
         {
@@ -93,7 +92,8 @@ int main(int argc, char const *argv[])
             else if (cmd.rfind("list_server", 0) == 0)
             {
                 FileInfo::send_cmd("list_server", sock);
-                FileInfo::print_list_files(FileInfo::receive_list_files(sock));
+                vector<FileInfo> files = FileInfo::receive_list_files(sock);
+                FileInfo::print_list_files(files);
                 
             }
             else if (cmd.rfind("list_client", 0) == 0)
@@ -108,7 +108,6 @@ int main(int argc, char const *argv[])
                 FileInfo::send_cmd("exit", sock);
                 client.end_connection();
                 sync_thread.join();
-                handle_server_request_thread.join();
                 return 0;
             }
             else
@@ -118,7 +117,6 @@ int main(int argc, char const *argv[])
         }
 
         sync_thread.join();
-        handle_server_request_thread.join();
         close(sock);
 
         return 0;

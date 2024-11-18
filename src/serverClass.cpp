@@ -282,8 +282,7 @@ void Server::handle_upload_request(int client_sock)
     std::string username = getUsername(client_sock);
     std::string directory = "users/sync_dir_" + username + "/";
     
-    FileInfo::receive_file(directory, client_sock);
-    
+    FileInfo::receive_file(directory, client_sock);   
 }
 
 void Server::handle_list_request(int client_sock)

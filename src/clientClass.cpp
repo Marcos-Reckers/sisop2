@@ -171,11 +171,11 @@ void Client::handle_sync()
             {
                 handle_upload_request();
             }
-            if (cmd.substr(0, 8) == "download")
+            else if (cmd.substr(0, 8) == "download")
             {
                 handle_download_request();
             }
-            if (cmd.substr(0, 6) == "delete")
+            else if (cmd.substr(0, 6) == "delete")
             {
                 handle_delete_request();
             }
@@ -296,7 +296,7 @@ void Client::monitor_sync_dir(string folder)
                     if (synced_files.find(event->name) != synced_files.end())
                     {
                         synced_files.erase(event->name);
-                        continue;
+                        break;
                     }
                     else if (synced_files.find(event->name) == synced_files.end())
                     {
@@ -311,7 +311,7 @@ void Client::monitor_sync_dir(string folder)
                     if (synced_files.find(event->name) != synced_files.end())
                     {
                         synced_files.erase(event->name);
-                        continue;
+                        break;
                     }
                     else if (synced_files.find(event->name) == synced_files.end())
                     {
