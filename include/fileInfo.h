@@ -63,7 +63,7 @@ public:
     vector<FileInfo> static list_files(string path);
     void static send_list_files(vector<FileInfo> files, int socket);
     void static print_list_files(vector<FileInfo> files);
-    void static delete_file(string file_path, int sock);
+    static bool delete_file(string file_path, int sock);
     void static send_file_name(string file_path, int sock);
     vector<FileInfo> static receive_list_files(int sock);
     void static send_cmd(std::string cmd, int sock);

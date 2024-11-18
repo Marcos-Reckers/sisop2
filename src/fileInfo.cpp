@@ -318,9 +318,9 @@ void FileInfo::print_list_files(vector<FileInfo> files)
     }
 }
 
-void FileInfo::delete_file(string file_path, int sock)
+// Modifique a função delete_file para retornar bool
+bool FileInfo::delete_file(string file_path, int sock)
 {
-
     if (!std::filesystem::exists(file_path))
     {
         std::cerr << "Erro ao deletar o arquivo." << std::endl;
@@ -329,12 +329,14 @@ void FileInfo::delete_file(string file_path, int sock)
         Packet error_packet = Packet::create_packet_cmd(error_msg);
         std::vector<uint8_t> error_packet_bytes = Packet::packet_to_bytes(error_packet);
         send(sock, error_packet_bytes.data(), error_packet_bytes.size(), 0);
-        return;
+        return false;
     }
-    else if (std::filesystem::remove(file_path))
-    {
+    
+    bool success = std::filesystem::remove(file_path);
+    if (success) {
         std::cout << "Arquivo deletado com sucesso." << std::endl;
     }
+    return success;
 }
 
 void FileInfo::monitor_sync_dir(string folder, int sock) {

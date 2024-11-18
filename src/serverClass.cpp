@@ -347,7 +347,20 @@ void Server::handle_delete_request(int client_sock)
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     std::string path = exec_path + "/users/sync_dir_" + username + "/" + file_name_buffer;
 
-    FileInfo::delete_file(path, client_sock);
+    if (FileInfo::delete_file(path, client_sock)) {
+        // Propaga o delete para outras sessões do mesmo usuário
+        for (int other_sock : user_sessions[username]) {
+            if (other_sock != client_sock) {
+                try {
+                    FileInfo::send_cmd("delete", other_sock);
+                    FileInfo::send_file_name(file_name_buffer, other_sock);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                } catch (const std::exception& e) {
+                    std::cerr << "Erro ao propagar delete para cliente " << other_sock << ": " << e.what() << std::endl;
+                }
+            }
+        }
+    }
 }
 
 void Server::handle_download_request(int client_sock)
@@ -386,15 +399,26 @@ void Server::handle_upload_request(int client_sock)
     
     std::string received_file = FileInfo::receive_file(directory, client_sock);
     if (!received_file.empty()) {
-        // Envia o arquivo de volta para o cliente que fez o upload
         std::string file_path = std::filesystem::canonical("/proc/self/exe").parent_path().string() 
                                + "/" + directory + received_file;
+                               
+        // Primeiro envia o arquivo de volta para o cliente que fez o upload
         if (std::filesystem::exists(file_path)) {
             FileInfo::send_file(file_path, client_sock);
         }
         
-        // Broadcast para outros clientes
-        broadcast_to_user(username, received_file, "upload", client_sock);
+        // Depois faz broadcast para todas as outras sessões
+        for (int other_sock : user_sessions[username]) {
+            if (other_sock != client_sock) {
+                try {
+                    FileInfo::send_cmd("upload", other_sock);
+                    FileInfo::send_file(file_path, other_sock);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                } catch (const std::exception& e) {
+                    std::cerr << "Erro ao enviar para cliente " << other_sock << ": " << e.what() << std::endl;
+                }
+            }
+        }
     }
 }
 
