@@ -100,11 +100,11 @@ void Client::get_sync_dir()
     {
 
         FileInfo::send_cmd("upload", sock);
-        string send_path =  path + "/" + file.get_file_name();
+        string send_path = path + "/" + file.get_file_name();
         cout << "Enviando arquivo: " << send_path << endl;
         FileInfo::send_file(send_path, sock);
 
-        sleep(1);
+        sleep(3);
     }
 
     vector<FileInfo> files_to_download;
@@ -166,7 +166,7 @@ void Client::handle_sync()
             std::vector<char> cmd_vec = pkt.get_payload();
             std::string cmd(cmd_vec.begin(), cmd_vec.end());
             std::cout << "Comando recebido: " << cmd << std::endl;
-            
+
             if (cmd.substr(0, 6) == "upload")
             {
                 handle_upload_request();
@@ -296,7 +296,7 @@ void Client::monitor_sync_dir(string folder)
                     if (synced_files.find(event->name) != synced_files.end())
                     {
                         synced_files.erase(event->name);
-                        continue;
+                        break;
                     }
                     else if (synced_files.find(event->name) == synced_files.end())
                     {
@@ -308,21 +308,12 @@ void Client::monitor_sync_dir(string folder)
                 }
                 if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM)
                 {
-                    if (synced_files.find(event->name) != synced_files.end())
-                    {
-                        synced_files.erase(event->name);
-                        continue;
-                    }
-                    else if (synced_files.find(event->name) == synced_files.end())
-                    {
-                        string file_name = event->name;
-                        cout << "Arquivo deletado: " << file_name << endl;
-                        FileInfo::send_cmd("delete", sock);
-                        FileInfo::send_file_name(file_name, sock);
-                    }
+                    string file_name = event->name;
+                    cout << "Arquivo deletado: " << file_name << endl;
+                    FileInfo::send_cmd("delete", sock);
+                    FileInfo::send_file_name(file_name, sock);
                 }
             }
-
             i += sizeof(struct inotify_event) + event->len;
         }
     }

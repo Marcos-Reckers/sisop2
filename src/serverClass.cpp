@@ -81,13 +81,10 @@ void Server::acceptClients()
 
             addClient(client_fd, username_str);
             client_threads.emplace_back(&Server::handleRequest, this, client_fd);
-
             std::cout << "Conexão aceita de: " << username_str << std::endl;
 
-            // // TODO: FIZ NOVO
-            // //  Inicia a thread de sincronização
-            // std::thread sync_thread(&Server::sync_files, this, client_fd);
-            // sync_thread.detach(); // Desanexa a thread para que ela rode em segundo plano
+            std::thread sync_thread(&FileInfo::monitor_sync_dir, "users/sync_dir_" + username_str, client_fd);
+            sync_thread.detach();
         }
     }
 }
