@@ -32,7 +32,9 @@ int main(int argc, char const *argv[])
     else
     {
         std::cout << "Conectado ao servidor" << std::endl;
-        std::thread sync_thread(&Client::handle_sync, &client, sock);
+        client.get_sync_dir();
+        std::thread handle_server_request_thread(&Client::handle_sync, &client);
+        std::thread sync_thread(&Client::monitor_sync_dir, &client, "sync_dir");
         while (true)
         {
             std::string cmd;
@@ -80,7 +82,8 @@ int main(int argc, char const *argv[])
                 {
                     FileInfo::send_cmd("download", sock);
                     FileInfo::send_file_name(file_name, sock);
-                    FileInfo::receive_file("/downloads", sock);
+                    string name = FileInfo::receive_file("/downloads", sock);
+                    std::cout << "Arquivo " << name << " baixado com sucesso." << std::endl;
                 }
                 else
                 {
@@ -104,6 +107,8 @@ int main(int argc, char const *argv[])
             {
                 FileInfo::send_cmd("exit", sock);
                 client.end_connection();
+                sync_thread.join();
+                handle_server_request_thread.join();
                 return 0;
             }
             else
@@ -113,6 +118,7 @@ int main(int argc, char const *argv[])
         }
 
         sync_thread.join();
+        handle_server_request_thread.join();
         close(sock);
 
         return 0;

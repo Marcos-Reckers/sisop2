@@ -55,9 +55,11 @@ public:
     void set_a_time(string a_time) { this->a_time = a_time; }
     void set_c_time(string c_time) { this->c_time = c_time; }
 
+    static int most_recent_time(std::string time1, std::string time2);
+
     void static send_file(string file_path, int client_sock);
     void static send_file_info(int client_sock, std::string file_path);
-    void static receive_file(string directory, int sock);
+    string static receive_file(string directory, int sock);
     void static create_dir(string dir_name);
     FileInfo static receive_file_info(int sock);
     vector<FileInfo> static list_files(string path);

@@ -45,7 +45,7 @@ void FileInfo::create_dir(string dir_name)
     }
 }
 
-void FileInfo::receive_file(std::string directory, int sock)
+string FileInfo::receive_file(std::string directory, int sock)
 {
     std::cout << "Recebendo informações do arquivo..." << std::endl;
 
@@ -65,7 +65,7 @@ void FileInfo::receive_file(std::string directory, int sock)
     if (!outfile.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
-        return;
+        return NULL;
     }
 
     int total_received_bytes = 0;
@@ -108,12 +108,14 @@ void FileInfo::receive_file(std::string directory, int sock)
     if (total_received_bytes == file_size)
     {
         std::cout << "Arquivo recebido com sucesso." << std::endl;
+        return file_name;
     }
     else
     {
         std::cerr << "Transferência de arquivo incompleta. Esperando " << file_size
                   << " bytes mas recebeu " << total_received_bytes << " bytes." << std::endl;
     }
+    return NULL;
 }
 
 FileInfo FileInfo::receive_file_info(int sock)
@@ -431,4 +433,39 @@ ssize_t FileInfo::recvAll(int sockfd, void *buf, size_t len, int flags)
         total += received;
     }
     return total;
+}
+
+int FileInfo::most_recent_time(std::string time1, std::string time2) {
+    struct tm tm1 = {}, tm2 = {};
+    time_t time1_t, time2_t;
+
+    // Parse first time string
+    if (strptime(time1.c_str(), "%a %b %d %H:%M:%S %Y", &tm1) == NULL) {
+        std::cerr << "Error: Failed to parse time1: " << time1 << std::endl;
+        return -1;
+    }
+
+    // Parse second time string
+    if (strptime(time2.c_str(), "%a %b %d %H:%M:%S %Y", &tm2) == NULL) {
+        std::cerr << "Error: Failed to parse time2: " << time2 << std::endl;
+        return -1;
+    }
+
+    // Convert to time_t
+    time1_t = mktime(&tm1);
+    time2_t = mktime(&tm2);
+
+    if (time1_t == -1 || time2_t == -1) {
+        std::cerr << "Error: Failed to convert tm to time_t." << std::endl;
+        return -1;
+    }
+
+    // Compare times
+    if (difftime(time1_t, time2_t) > 0) {
+        return 1;       // time1 is more recent
+    } else if (difftime(time1_t, time2_t) < 0) {
+        return 2;       // time2 is more recent
+    } else {
+        return 0;       // times are equal
+    }
 }
