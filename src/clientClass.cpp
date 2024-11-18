@@ -52,15 +52,6 @@ int16_t Client::connect_to_server()
 
 void Client::get_sync_dir()
 {
-    // FileInfo::send_cmd("get_sync_dir", sock);
-    // recv list_server
-    // comparação list_server com list_client
-    // receber arquivos que não estão no client
-    // enviar arquivos que não estão no server :: SÓ ENVIA O QUE TA FORA DO CONJUNTO
-
-    // estrutura do jv: td file que vem do svr -> vai pra um conjunto de arquivos
-    // quando inotify trigga -> retira do conjunto o file
-
     FileInfo::send_cmd("get_sync_dir", sock);
     FileInfo::create_dir("sync_dir");
 
@@ -98,12 +89,10 @@ void Client::get_sync_dir()
 
     for (auto file : files_to_upload)
     {
-
         FileInfo::send_cmd("upload", sock);
         string send_path =  path + "/" + file.get_file_name();
         cout << "Enviando arquivo: " << send_path << endl;
         FileInfo::send_file(send_path, sock);
-
         sleep(1);
     }
 
@@ -170,10 +159,6 @@ void Client::handle_sync()
             if (cmd.substr(0, 6) == "upload")
             {
                 handle_upload_request();
-            }
-            else if (cmd.substr(0, 8) == "download")
-            {
-                handle_download_request();
             }
             else if (cmd.substr(0, 6) == "delete")
             {
@@ -291,7 +276,7 @@ void Client::monitor_sync_dir(string folder)
 
             if (event->len)
             {
-                if (event->mask & IN_CLOSE_WRITE)
+                if (event->mask & IN_CLOSE_WRITE || event->mask & IN_MOVED_TO)
                 {
                     if (synced_files.find(event->name) != synced_files.end())
                     {
