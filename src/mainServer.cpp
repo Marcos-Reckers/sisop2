@@ -17,14 +17,11 @@ int main(int argc, char const *argv[]) {
     // Cria uma thread para aceitar clientes de forma contínua
     std::thread accept_thread(&Server::acceptClients, &server);
 
-    // Cria uma thread para verificar sync_dir de clientes
-    // std::thread sync_thread(&Server::sync_client_dir, &server);
-
     // Espera até que o servidor seja encerrado
     std::cout << "Pressione Enter para encerrar o servidor..." << std::endl;
-    std::cin.get();  // Aguarda o usuário pressionar Enter para encerrar
+    std::cin.get();
 
-    server.stop();  // Encerra o servidor e fecha todas as conexões de clientes
+    server.stop();
 
     // Aguarda que a thread de aceitação de clientes termine
     if (accept_thread.joinable()) {

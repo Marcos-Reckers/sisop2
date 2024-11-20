@@ -3,7 +3,6 @@
 
 #include "fileInfo.h"
 
-
 class Server
 {
 private:
@@ -31,23 +30,21 @@ private:
     // Método para encerrar o servidor e todas as conexões ativas de clientes
     void stop();
 
+    void handle_communication(int client_sock);
+    void create_sync_dir(int client_sock);
+
+    static void handle_commands(int client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue);
+    static void handle_sync(int client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue);
+    static void monitor_sync_dir(int client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue);
+
     // Método para adicionar uma thread de cliente ao vetor de threads
     void addClientThread(std::thread &&thread);
 
-    // Método para lidar com as requisições de um cliente
-    void handleRequest(int client_sock);
 
-    // Método para receber um arquivo
-
-    void handle_download_request(int client_sock);
-    void handle_upload_request(int client_sock);
-    void handle_list_request(int client_sock);
-    void handle_delete_request(int client_sock);
 
     // Método para encerrar a conexão com um cliente
     void close_connection(int client_sock);
-    void get_sync_dir(int client_sock);
-    void handle_sync(int client_sock);
+
 
 
 

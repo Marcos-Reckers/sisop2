@@ -28,50 +28,7 @@
 #include <optional>
 #include <fcntl.h>
 #include "packet.h"
-
-namespace Threads
-{
-    template <typename T>
-    class AtomicQueue
-    {
-    private:
-        std::mutex lock = std::mutex();
-        std::queue<T> resources;
-
-    public:
-        AtomicQueue() : resources(std::queue<T>()) {}
-        AtomicQueue(std::queue<T> resources) : resources(resources) {}
-
-        void produce(T resource)
-        {
-            const std::lock_guard<std::mutex> lock_guard(lock);
-            resources.push(resource);
-        }
-
-        std::optional<T> consume()
-        {
-            const std::lock_guard<std::mutex> lock_guard(lock);
-            if (resources.empty())
-            {
-                return std::nullopt;
-            }
-
-            auto resource = resources.front();
-            resources.pop();
-            return resource;
-        }
-
-        T consume_blocking()
-        {
-            auto resource = this->consume();
-            while (!resource.has_value())
-            {
-                resource = this->consume();
-            }
-            return resource.value();
-        }
-    };
-} // namespace Threads (usando código do IAN KERSZ AMARAL)
+#include "threads.h"
 
 using namespace std;
 
@@ -119,7 +76,7 @@ public:
     void static send_cmd(std::string cmd, int sock);
 
 
-    static string receive_file(Threads::AtomicQueue<std::vector<Packet>> &received_queue, string dst_folder);
+    static string receive_file(Threads::AtomicQueue<vector<Packet>> &received_queue, string dst_folder);
     static FileInfo receive_file_info(vector<Packet> &received_packet);
     static vector<FileInfo> receive_list_server(Threads::AtomicQueue<std::vector<Packet>> &received_queue);
     

@@ -320,7 +320,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
 {
     Packet pkt_cmd = Packet::create_packet_cmd(command);
 
-    if (command == "upload")
+    if (command == "upload" || command == "download_response")
     {
         FileInfo file_info;
         file_info.retrieve_info_from_file(file_path_or_file_name);
@@ -373,4 +373,17 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         solo_pkt.push_back(pkt_cmd);
         return solo_pkt;
     }
+    else if (command == "list_server_response")
+    {
+        vector<Packet> pkt_files;
+        vector<FileInfo> files = list_files(file_path_or_file_name);
+        for (FileInfo file : files)
+        {
+            Packet pkt_file_info = Packet::create_packet_info(file);
+            pkt_files.push_back(pkt_file_info);
+        }
+        pkt_files.insert(pkt_files.begin(), pkt_cmd);
+        return pkt_files;
+    }
+    return {};
 } 

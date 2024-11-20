@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
     }
     // cria a comunication_thread
     Client client(args[1], server, args[3]);
-    std::thread communication_thread(Client::handle_connection, &client);
+    std::thread communication_thread(&Client::handle_connection, &client);
 
     communication_thread.join();
     return 0;    

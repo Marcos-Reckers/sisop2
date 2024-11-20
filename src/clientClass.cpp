@@ -43,12 +43,11 @@ void Client::handle_connection()
         // cria as threds
         //  ===================================================================
         //  criathread de sync
-        std::thread sync_thread(Client::handle_sync, this, send_queue, sync_queue, "sync_dir");
-
+        std::thread sync_thread([this, &send_queue, &sync_queue](){this->handle_sync(send_queue, sync_queue, "sync_dir");});
         // cria thread de comandos
-        std::thread command_thread(Client::send_commands, this, send_queue, received_queue);
+        std::thread command_thread([this, &send_queue, &received_queue](){this->send_commands(send_queue, received_queue);});
         // cria thread de monitoramento
-        std::thread monitor_thread(Client::monitor_sync_dir, this, "sync_dir", send_queue);
+        std::thread monitor_thread([this, &send_queue](){this->monitor_sync_dir("sync_dir", send_queue);});
         // ===================================================================
 
         while (this->sock > 0)
@@ -139,6 +138,8 @@ int16_t Client::connect_to_server()
             std::string username_with_null = username + '\0';
             send(sock, username_with_null.c_str(), username_with_null.size(), 0);
 
+            //TODO: Verificar se tem mais que dois dispositivos conectados
+            //reimplementar end_connection
             if (end_connection())
             {
                 cout << "Não é possível conectar mais do que 2 dispositivos simultâneos." << endl;
@@ -432,4 +433,9 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
     delete[] buffer;
     inotify_rm_watch(fd, wd);
     close(fd);
+}
+
+bool Client::end_connection()
+{
+    return false;
 }

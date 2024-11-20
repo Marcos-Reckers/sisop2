@@ -1,4 +1,8 @@
 #include "packet.h"
+#include <iostream>
+#include <cmath>
+#include <cstring>
+#include "fileInfo.h"
 
 Packet::Packet() : type(0), seqn(0), total_size(0), length(0), payload() {}
 
@@ -61,7 +65,18 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
 
 Packet Packet::create_packet_cmd(const std::string &command)
 {
-    return Packet(1, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+    if (command.find("response") != std::string::npos)
+    {
+        return Packet(2, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+    }
+    else if (command.find("exit") != std::string::npos)
+    {
+        return Packet(3, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+    }
+    else
+    {
+        return Packet(1, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+    }
 }
 
 std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data)

@@ -1,7 +1,9 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include "fileInfo.h"
+#include <vector>
+#include <cstdint>
+#include <string>
 
 #define MAX_PAYLOAD_SIZE 4096
 
@@ -48,7 +50,6 @@ public:
     void set_total_size(uint32_t ts);
     void set_length(uint16_t len);
     void set_payload(const std::vector<char> &pl);
-    std::vector<char> info_to_bytes(const FileInfo &file_info);
 };
 
 #endif // PACKET_H
