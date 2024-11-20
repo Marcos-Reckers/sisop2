@@ -45,111 +45,60 @@ void FileInfo::create_dir(string dir_name)
     }
 }
 
-string FileInfo::receive_file(std::string directory, int sock)
+string FileInfo::receive_file(Threads::AtomicQueue<std::vector<Packet>> &received_queue, string dst_folder)
 {
-    std::cout << "Recebendo informações do arquivo..." << std::endl;
-
-    FileInfo file_info = receive_file_info(sock);
-    file_info.print();
-
-    std::string file_name = file_info.get_file_name();
-    int file_size = file_info.get_file_size();
-
-    create_dir(directory);
-
+    // Le da fila de pacotes recebidos e monta o arquivo:
+    auto received_packet = received_queue.consume_blocking();
+    FileInfo file_info = receive_file_info(received_packet);
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    std::string save_path = exec_path + "/" + directory + "/" + file_name;
-
+    string file_name = file_info.get_file_name();
+    std::string save_path = exec_path + "/" + dst_folder + "/" + file_name;
     std::ofstream outfile(save_path, std::ios::binary);
-
     if (!outfile.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
-        return NULL;
+        return "";
     }
-
-    int total_received_bytes = 0;
-
-    while (total_received_bytes < file_size)
+    // Ignora dois primeiros pacotes, que soh tem informacao
+    int counter = 0;
+    for (auto packet : received_packet)
     {
-        // Recebe o header do pacote
-        size_t header_size = Packet::packet_base_size();
-        std::vector<uint8_t> header_buffer(header_size);
-
-        ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
-        if (received_bytes <= 0)
+        if (counter < 1)
         {
-            std::cerr << "Erro ao receber o header do pacote." << std::endl;
-            break;
+            counter++;
+            continue;
         }
-
-        Packet packet = Packet::bytes_to_packet(header_buffer);
-        cout << "Pacote " << packet.get_seqn() << " de tamanho: " << received_bytes + packet.get_length() << " bytes recebido." << std::endl;
-        // Recebe o payload do pacote
-        uint16_t payload_length = packet.get_length();
-        if (payload_length > 0)
-        {
-            std::vector<char> payload_buffer(payload_length);
-            received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
-            if (received_bytes <= 0)
-            {
-                std::cerr << "Erro ao receber o payload do pacote." << std::endl;
-                break;
-            }
-
-            // Escreve o payload no arquivo
-            outfile.write(payload_buffer.data(), received_bytes);
-            total_received_bytes += received_bytes;
-        }
+        outfile.write(packet.get_payload().data(), packet.get_payload().size());
     }
-
     outfile.close();
-
-    if (total_received_bytes == file_size)
-    {
-        std::cout << "Arquivo recebido com sucesso." << std::endl;
-        return file_name;
-    }
-    else
-    {
-        std::cerr << "Transferência de arquivo incompleta. Esperando " << file_size
-                  << " bytes mas recebeu " << total_received_bytes << " bytes." << std::endl;
-    }
-    return NULL;
+    std::cout << "Arquivo recebido com sucesso." << std::endl;
+    return file_name;
 }
 
-FileInfo FileInfo::receive_file_info(int sock)
+FileInfo FileInfo::receive_file_info(vector<Packet> &received_packet)
 {
-    // Recebe o header do pacote
-    size_t header_size = Packet::packet_base_size();
-    std::vector<uint8_t> header_buffer(header_size);
-
-    ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
-    if (received_bytes <= 0)
-    {
-        std::cerr << "Erro ao receber o header do pacote." << std::endl;
-        return FileInfo();
-    }
-
-    Packet packet = Packet::bytes_to_packet(header_buffer);
-
-    // Recebe o payload do pacote
-    uint16_t payload_length = packet.get_length();
-    if (payload_length > 0)
-    {
-        std::vector<char> payload_buffer(payload_length);
-        received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
-        if (received_bytes <= 0)
-        {
-            std::cerr << "Erro ao receber o payload do pacote." << std::endl;
-            return FileInfo();
-        }
-        packet.set_payload(payload_buffer);
-    }
-
-    // Converte o payload em FileInfo
-    FileInfo file_info = Packet::string_to_info(packet.get_payload());
+    FileInfo file_info = Packet::string_to_info(received_packet[1].get_payload());
     return file_info;
+}
+
+vector<FileInfo> FileInfo::receive_list_server(Threads::AtomicQueue<std::vector<Packet>> &received_queue)
+{
+    // Le da fila de pacotes recebidos e monta o arquivo:
+    auto received_packet = received_queue.consume_blocking();
+    vector<FileInfo> file_infos;
+    int counter = 0;
+    for (auto packet : received_packet)
+    {
+        // Ignora o primeiro pacote, que soh tem informacao
+        if (counter <= 1)
+        {
+            counter++;
+            continue;
+        }
+        FileInfo file_info = Packet::string_to_info(packet.get_payload());
+        file_infos.push_back(file_info);
+    }
+    return file_infos;
 }
 
 void FileInfo::send_file(string file_path, int sock)
@@ -260,51 +209,6 @@ void FileInfo::send_list_files(vector<FileInfo> files, int socket)
     }
 }
 
-vector<FileInfo> FileInfo::receive_list_files(int sock)
-{
-    std::vector<FileInfo> files = {};
-
-    while (true)
-    {
-        // Recebe o header do pacote
-        size_t header_size = Packet::packet_base_size();
-        std::vector<uint8_t> header_buffer(header_size);
-
-        ssize_t received_bytes = recvAll(sock, header_buffer.data(), header_size, 0);
-        if (received_bytes <= 0)
-        {
-            std::cerr << "Erro ao receber o header do pacote." << std::endl;
-            break;
-        }
-
-        Packet packet = Packet::bytes_to_packet(header_buffer);
-
-        // Recebe o payload do pacote, se houver
-        uint16_t payload_length = packet.get_length();
-        if (payload_length > 0)
-        {
-            std::vector<char> payload_buffer(payload_length);
-            received_bytes = recvAll(sock, payload_buffer.data(), payload_length, 0);
-            if (received_bytes <= 0)
-            {
-                std::cerr << "Erro ao receber o payload do pacote." << std::endl;
-                break;
-            }
-            packet.set_payload(payload_buffer);
-        }
-
-        if (packet.get_type() == 1 && packet.get_payload_as_string() == "END_OF_LIST")
-        {
-            break;
-        }
-
-        FileInfo file_info = Packet::string_to_info(packet.get_payload());
-        files.push_back(file_info);
-    }
-
-    return files;
-}
-
 void FileInfo::print_list_files(vector<FileInfo> files)
 {
     for (FileInfo file : files)
@@ -315,81 +219,23 @@ void FileInfo::print_list_files(vector<FileInfo> files)
     }
 }
 
-void FileInfo::delete_file(string file_path, int sock)
+void FileInfo::delete_file(string file_path)
 {
 
     if (!std::filesystem::exists(file_path))
     {
-        std::cerr << "Erro ao deletar o arquivo." << std::endl;
-        std::cerr << "Arquivo não encontrado." << std::endl;
-        std::string error_msg = "ERROR: Arquivo não encontrado.";
-        Packet error_packet = Packet::create_packet_cmd(error_msg);
-        std::vector<uint8_t> error_packet_bytes = Packet::packet_to_bytes(error_packet);
-        send(sock, error_packet_bytes.data(), error_packet_bytes.size(), 0);
-        return;
+        std::cerr << "Erro ao deletar o arquivo, NOT FOUND." << std::endl;
     }
-    else if (std::filesystem::remove(file_path))
+    try
     {
-        std::cout << "Arquivo deletado com sucesso." << std::endl;
+        std::filesystem::remove(file_path);
     }
-}
-
-void FileInfo::monitor_sync_dir(string folder, int sock) {
-
-    FileInfo::create_dir(folder);
-    
-    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    std::string sync_dir = exec_path + "/" + folder;
-
-    int fd = inotify_init();
-    if (fd < 0) {
-        perror("inotify_init");
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
         return;
     }
-
-    int wd = inotify_add_watch(fd, sync_dir.c_str(), IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM);
-    if (wd < 0) {
-        perror("inotify_add_watch");
-        close(fd);
-        return;
-    }
-
-    const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
-    char *buffer = new char[buf_size];
-
-    while (true) {
-        int length = read(fd, buffer, buf_size);
-        if (length < 0) {
-            perror("read");
-            break;
-        }
-
-        int i = 0;
-        while (i < length) {
-            struct inotify_event *event = (struct inotify_event *) &buffer[i];
-
-            if (event->len) {
-                if (event->mask & IN_CLOSE_WRITE) {
-                    string file_name = event->name;
-                        cout << "Arquivo pronto para envio: " << file_name << endl;
-                        FileInfo::send_cmd("upload", sock);
-                        FileInfo::send_file(sync_dir + "/" +  file_name, sock);
-                }
-                if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM) {
-                    string file_name = event->name;
-                        cout << "Arquivo deletado: " << file_name << endl;
-                        FileInfo::send_cmd("delete", sock);
-                        FileInfo::send_file_name(file_name, sock);
-                }
-            }
-
-            i += sizeof(struct inotify_event) + event->len;
-        }
-    }
-
-    delete[] buffer;
-    inotify_rm_watch(fd, wd);
-    close(fd);
+    std::cout << "Arquivo deletado com sucesso." << std::endl;
 }
 
 void FileInfo::send_cmd(std::string cmd, int sock)
@@ -469,3 +315,62 @@ int FileInfo::most_recent_time(std::string time1, std::string time2) {
         return 0;       // times are equal
     }
 }
+
+vector<Packet> FileInfo::create_packet_vector(string command, string file_path_or_file_name)
+{
+    Packet pkt_cmd = Packet::create_packet_cmd(command);
+
+    if (command == "upload")
+    {
+        FileInfo file_info;
+        file_info.retrieve_info_from_file(file_path_or_file_name);
+        Packet pkt_file_info = Packet::create_packet_info(file_info);
+
+        std::vector<Packet> pkt_files = Packet::create_packets_from_file(file_path_or_file_name);
+        pkt_files.insert(pkt_files.begin(), pkt_file_info);
+        pkt_files.insert(pkt_files.begin(), pkt_cmd);
+        return pkt_files;
+    }
+    else if (command == "delete")
+    {
+        FileInfo file_info;
+        file_info.set_file_name(file_path_or_file_name);
+        Packet pkt_file_info = Packet::create_packet_info(file_info);
+
+        std::vector<Packet> pkts;
+        pkts.push_back(pkt_cmd);
+        pkts.push_back(pkt_file_info);
+
+        return pkts;
+    }
+    else if (command == "download")
+    {
+        FileInfo file_info;
+        file_info.set_file_name(file_path_or_file_name);
+        Packet pkt_file_info = Packet::create_packet_info(file_info);
+
+        std::vector<Packet> pkts;
+        pkts.push_back(pkt_cmd);
+        pkts.push_back(pkt_file_info);
+
+        return pkts;   
+    }
+    else if (command == "list_server")
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
+    }
+    else if (command == "list_client")
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
+    }
+    else if (command == "exit")
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
+    }
+} 
