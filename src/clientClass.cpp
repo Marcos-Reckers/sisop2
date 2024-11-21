@@ -4,6 +4,61 @@ Client::Client(string username, struct hostent *server, string server_port) : us
 
 void Client::set_sock(int sock) { this->sock = sock; }
 
+void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+{
+    while (this->sock > 0)
+    {
+        // consumir do send_queue e enviar para o servidor na sock
+        auto maybe_packet = send_queue.consume();
+        if (maybe_packet.has_value())
+        {
+            cout << "Enviando pacote" << endl;
+            auto packet = maybe_packet.value();
+            for (auto pkt : packet)
+            {
+                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
+                if (sent_bytes < 0)
+                {
+                    std::cerr << "Erro ao enviar pacote." << std::endl;
+                }
+                std::cout << "Enviou Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+            }
+        }
+
+        // pegar da sock e colocar na received_queue ou sync_queue
+        std::vector<uint8_t> packet_bytes;
+
+        ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
+        if (received_bytes < 0)
+        {
+            std::cerr << "Erro ao receber pacote." << std::endl;
+        }
+        else if (received_bytes != 0)
+        {
+            Packet received_packet = Packet::bytes_to_packet(packet_bytes);
+            if (received_packet.get_type() == 1)
+            {
+                sync_queue.produce({received_packet});
+            }
+            else if (received_packet.get_type() == 2)
+            {
+                received_queue.produce({received_packet});
+            }
+            else if (received_packet.get_type() == 3)
+            {
+                std::cout << "Conexão encerrada pelo servidor." << std::endl;
+                close(this->sock);
+                this->sock = -1;
+            }
+            else
+            {
+                std::cerr << "Pacote recebido com tipo inválido." << std::endl;
+            }
+        }
+    }
+}
+
 void Client::handle_connection()
 {
     this->sock = this->connect_to_server();
@@ -35,72 +90,30 @@ void Client::handle_connection()
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
 
+        std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
+                                   { this->handle_io(send_queue, received_queue, sync_queue); });
+
+        
         // pega os arquivos do servidor e do cliente e sincroniza
         // ===================================================================
+        // cria thread de comandos
+        std::thread command_thread([this, &send_queue, &received_queue]()
+                                   { this->send_commands(send_queue, received_queue); });
+        //  criathread de sync
+        std::thread sync_thread([this, &send_queue, &sync_queue]()
+                                { this->handle_sync(send_queue, sync_queue, "sync_dir"); });
+        // cria thread de monitoramento
+        std::thread monitor_thread([this, &send_queue]()
+                                   { this->monitor_sync_dir("sync_dir", send_queue); });
+        cout << "Sincronizando diretórios..." << endl;
         get_sync_dir(send_queue, received_queue);
-        // ===================================================================
-
+        //  ===================================================================
+        cout << "Sincronização inicial concluída. (pos get_sync_dir)" << endl;
         // cria as threds
         //  ===================================================================
-        //  criathread de sync
-        std::thread sync_thread([this, &send_queue, &sync_queue](){this->handle_sync(send_queue, sync_queue, "sync_dir");});
-        // cria thread de comandos
-        std::thread command_thread([this, &send_queue, &received_queue](){this->send_commands(send_queue, received_queue);});
-        // cria thread de monitoramento
-        std::thread monitor_thread([this, &send_queue](){this->monitor_sync_dir("sync_dir", send_queue);});
         // ===================================================================
 
-        while (this->sock > 0)
-        {
-            // consumir do send_queue e enviar para o servidor na sock
-            auto maybe_packet = send_queue.consume();
-            if (maybe_packet.has_value())
-            {
-                auto packet = maybe_packet.value();
-                for (auto pkt : packet)
-                {
-                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
-                    if (sent_bytes < 0)
-                    {
-                        std::cerr << "Erro ao enviar pacote." << std::endl;
-                    }
-                    std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
-                }
-            }
-
-            // pegar da sock e colocar na received_queue ou sync_queue
-            std::vector<uint8_t> packet_bytes;
-
-            ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
-            if (received_bytes < 0)
-            {
-                std::cerr << "Erro ao receber pacote." << std::endl;
-            }
-            else if (received_bytes != 0)
-            {
-                Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-                if (received_packet.get_type() == 1)
-                {
-                    sync_queue.produce({received_packet});
-                }
-                else if (received_packet.get_type() == 2)
-                {
-                    received_queue.produce({received_packet});
-                }
-                else if (received_packet.get_type() == 3)
-                {
-                    std::cout << "Conexão encerrada pelo servidor." << std::endl;
-                    close(this->sock);
-                    this->sock = -1;
-                }
-                else
-                {
-                    std::cerr << "Pacote recebido com tipo inválido." << std::endl;
-                }
-            }
-        }
-
+        io_thread.join();
         sync_thread.join();
         command_thread.join();
         monitor_thread.join();
@@ -118,7 +131,8 @@ int16_t Client::connect_to_server()
 {
     struct sockaddr_in serv_addr;
     // Cria o socket
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    int curr_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (curr_sock < 0)
     {
         cout << "Erro ao criar socket" << endl;
         return -1;
@@ -133,21 +147,20 @@ int16_t Client::connect_to_server()
     int attempts = 0;
     while (attempts < 10)
     {
-        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
+        if (connect(curr_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
         {
             std::string username_with_null = username + '\0';
-            send(sock, username_with_null.c_str(), username_with_null.size(), 0);
+            send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
 
-            //TODO: Verificar se tem mais que dois dispositivos conectados
-            //reimplementar end_connection
+            // TODO: Verificar se tem mais que dois dispositivos conectados
+            // reimplementar end_connection
             if (end_connection())
             {
                 cout << "Não é possível conectar mais do que 2 dispositivos simultâneos." << endl;
                 return -2;
             }
 
-            set_sock(sock);
-            return sock;
+            return curr_sock;
         }
         else
         {
@@ -287,8 +300,11 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             {
                 if (std::filesystem::exists(file_path))
                 {
-                    cout << "Enviando arquivo: " << file_path << endl;
-                    send_queue.produce(FileInfo::create_packet_vector("upload", file_path));
+                    cout << "preparando arquivo: " << file_path << endl;
+                    const auto send_info = FileInfo::create_packet_vector("upload", file_path);
+                    cout << "pacote preparado para a fila" << endl;
+                    send_queue.produce(send_info);
+                    cout << "Arquivo colocado na fila com sucesso." << endl;
                 }
                 else
                 {

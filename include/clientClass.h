@@ -26,6 +26,7 @@ public:
     void get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue);
     void handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue, string folder_name);
     void monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue);
+    void handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue);
 };
 
 #endif // CLIENTCLASS_H

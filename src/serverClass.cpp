@@ -38,12 +38,14 @@ bool Server::start()
     }
 
     std::cout << "Servidor iniciado e aguardando conexões na porta " << port << "." << std::endl;
+    std::cout << "Sock " << server_fd << std::endl;
     return true;
 }
 
 // Método para aceitar conexões de clientes em novas threads
 void Server::acceptClients()
 {
+    std::cout << "Sock acceptClients " << server_fd << std::endl;
     while (true)
     {
         sockaddr_in client_addr;
@@ -90,6 +92,60 @@ void Server::acceptClients()
     }
 }
 
+void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+{
+    while (client_sock > 0)
+    {
+        // consumir do send_queue e enviar para o servidor na sock
+        auto maybe_packet = send_queue.consume();
+        if (maybe_packet.has_value())
+        {
+            auto packet = maybe_packet.value();
+            for (auto pkt : packet)
+            {
+                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+                if (sent_bytes < 0)
+                {
+                    std::cerr << "Erro ao enviar pacote." << std::endl;
+                }
+                std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+            }
+        }
+
+        // pegar da sock e colocar na received_queue ou sync_queue
+        std::vector<uint8_t> packet_bytes;
+        ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+        if (received_bytes < 0)
+        {
+            std::cerr << "Erro ao receber pacote." << std::endl;
+        }
+        else if (received_bytes > 0)
+        {
+            cout << "Pacote recebido:"<< "tamanho:" << received_bytes << endl;
+            Packet received_packet = Packet::bytes_to_packet(packet_bytes);
+            if (received_packet.get_type() == 1)
+            {
+                sync_queue.produce({received_packet});
+            }
+            else if (received_packet.get_type() == 2)
+            {
+                received_queue.produce({received_packet});
+            }
+            else if (received_packet.get_type() == 3)
+            {
+                std::cout << "Conexão encerrada pelo servidor." << std::endl;
+                close(client_sock);
+                client_sock = -1;
+            }
+            else
+            {
+                std::cerr << "Pacote recebido com tipo inválido." << std::endl;
+            }
+        }
+    }
+}
+
 void Server::handle_communication(int client_sock)
 {
     if (client_sock > 0)
@@ -120,6 +176,9 @@ void Server::handle_communication(int client_sock)
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
 
+        std::thread io_thread([&client_sock, &send_queue, &received_queue, &sync_queue]()
+                              { Server::handle_io(client_sock, send_queue, received_queue, sync_queue); });
+
         // Cria a pasta do cliente no servidor para sincronização
         // ===================================================================
         create_sync_dir(client_sock);
@@ -129,67 +188,17 @@ void Server::handle_communication(int client_sock)
         //  ===================================================================
         //  criathread de sync
         auto client_folder = "sync_dir_" + getUsername(client_sock);
-        std::thread sync_thread([client_sock, client_folder, &send_queue, &sync_queue]()
+        std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
                                 { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
         // cria thread de comandos
-        std::thread command_thread([client_sock, client_folder, &send_queue, &received_queue]()
+        std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
         // cria thread de monitoramento
-        std::thread monitor_thread([client_sock, client_folder, &send_queue]()
+        std::thread monitor_thread([&client_sock, client_folder, &send_queue]()
                                    { Server::monitor_sync_dir(client_sock, client_folder, send_queue); });
         // ===================================================================
 
-        while (client_sock > 0)
-        {
-            // consumir do send_queue e enviar para o servidor na sock
-            auto maybe_packet = send_queue.consume();
-            if (maybe_packet.has_value())
-            {
-                auto packet = maybe_packet.value();
-                for (auto pkt : packet)
-                {
-                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-                    if (sent_bytes < 0)
-                    {
-                        std::cerr << "Erro ao enviar pacote." << std::endl;
-                    }
-                    std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
-                }
-            }
-
-            // pegar da sock e colocar na received_queue ou sync_queue
-            std::vector<uint8_t> packet_bytes;
-
-            ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-            if (received_bytes < 0)
-            {
-                std::cerr << "Erro ao receber pacote." << std::endl;
-            }
-            else if (received_bytes != 0)
-            {
-                Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-                if (received_packet.get_type() == 1)
-                {
-                    sync_queue.produce({received_packet});
-                }
-                else if (received_packet.get_type() == 2)
-                {
-                    received_queue.produce({received_packet});
-                }
-                else if (received_packet.get_type() == 3)
-                {
-                    std::cout << "Conexão encerrada pelo servidor." << std::endl;
-                    close(client_sock);
-                    client_sock = -1;
-                }
-                else
-                {
-                    std::cerr << "Pacote recebido com tipo inválido." << std::endl;
-                }
-            }
-        }
-
+        io_thread.join();
         sync_thread.join();
         command_thread.join();
         monitor_thread.join();
@@ -203,14 +212,16 @@ void Server::handle_communication(int client_sock)
     }
 }
 
-void Server::handle_commands(int client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
+void Server::handle_commands(int &client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
 {
-    std::cout << "LIDANDO COM COMMANDS UAUUUUUUUUUUUU" << std::endl;
+    std::cout << "LIDANDO COM COMMANDS "<< client_sock << std::endl;
     string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
     {
+        cout << "Esperando comando" << endl;
         auto packet = received_queue.consume_blocking();
+        cout << "Comando recebido" << endl;
         if (packet[0].get_type() == 1)
         {
             string cmd = packet[0].get_payload_as_string();
@@ -257,9 +268,9 @@ void Server::create_sync_dir(int client_fd)
     FileInfo::create_dir(dir_path);
 }
 
-void Server::handle_sync(int client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
-    std::cout << "LIDANDO COM SYNC UAUUUUUUUUUUUU" << std::endl;
+    std::cout << "LIDANDO COM SYNC " << client_sock << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
@@ -348,7 +359,7 @@ void Server::close_connection(int client_sock)
     send(client_sock, "exit", 4, 0);
 }
 
-void Server::monitor_sync_dir(int client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue)
+void Server::monitor_sync_dir(int &client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue)
 {
 
     FileInfo::create_dir(folder_name);
@@ -411,137 +422,3 @@ void Server::monitor_sync_dir(int client_sock, string folder_name, Threads::Atom
     inotify_rm_watch(fd, wd);
     close(fd);
 }
-
-// void Server::handleRequest(int client_sock)
-// {
-//     std::cout << "Entrou em handleRequest, com: " << getUsername(client_sock) << std::endl;
-
-//     while (true)
-//     {
-//         ssize_t total_size = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
-//         std::vector<uint8_t> packet_buffer(total_size);
-//         ssize_t received_bytes = recv(client_sock, packet_buffer.data(), packet_buffer.size(), 0);
-
-//         if (received_bytes < 0)
-//         {
-//             std::cerr << "Erro ao receber o pacote." << std::endl;
-//             return;
-//         }
-
-//         if (received_bytes == 0)
-//         {
-
-//             std::string username = getUsername(client_sock);
-
-//             // Manda um sinal para o semaforo para liberar um novo dispositivo
-//             if (active.find(username) != active.end())
-//             {
-//                 sem_post(active[username].get());
-//             }
-
-//             std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
-//             removeClient(client_sock);
-//             close(client_sock);
-
-//             return;
-//         }
-
-//         Packet pkt = Packet::bytes_to_packet(packet_buffer);
-//         pkt.print();
-
-//         if (pkt.get_type() == 1)
-//         {
-//             std::vector<char> cmd_vec = pkt.get_payload();
-//             std::string cmd(cmd_vec.begin(), cmd_vec.end());
-//             std::cout << "Comando recebido: " << cmd << std::endl;
-
-//             if (cmd.substr(0, 6) == "upload")
-//             {
-//                 handle_upload_request(client_sock);
-//             }
-//             if (cmd.substr(0, 8) == "download")
-//             {
-//                 ;
-//                 handle_download_request(client_sock);
-//             }
-//             if (cmd.substr(0, 6) == "delete")
-//             {
-//                 handle_delete_request(client_sock);
-//             }
-//             if (cmd.substr(0, 11) == "list_server")
-//             {
-//                 handle_list_request(client_sock);
-//             }
-//             if (cmd.substr(0, 12) == "get_sync_dir")
-//             {
-//                 create_sync_dir(client_sock);
-//                 cout << "get_sync_dir criado e sincronização implementada" << endl;
-//             }
-//             if (cmd.substr(0, 4) == "exit")
-//             {
-//                 close_connection(client_sock);
-//             }
-//         }
-//         else
-//         {
-//             std::cerr << "Pacote recebido não é do tipo 1." << std::endl;
-//         }
-//     }
-// }
-// void Server::handle_delete_request(int client_sock)
-// {
-//     char file_name_buffer[256] = {0};
-//     std::string username = getUsername(client_sock);
-//     ssize_t received_bytes = recv(client_sock, file_name_buffer, sizeof(file_name_buffer), 0);
-//     if (received_bytes <= 0)
-//     {
-//         std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
-//         return;
-//     }
-
-//     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-//     std::string path = exec_path + "/users/sync_dir_" + username + "/" + file_name_buffer;
-
-//     FileInfo::delete_file(path);
-// }
-
-// void Server::handle_download_request(int client_sock)
-// {
-//     char file_name_buffer[256] = {0};
-//     std::string username = getUsername(client_sock);
-//     ssize_t received_bytes = recv(client_sock, file_name_buffer, sizeof(file_name_buffer), 0);
-
-//     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-//     std::string file_path = exec_path + "/users/sync_dir_" + username + "/" + file_name_buffer;
-//     std::cout << "Arquivo a ser enviado: " << file_path << std::endl;
-
-//     if (received_bytes <= 0)
-//     {
-//         std::cerr << "Erro ao receber o nome do arquivo." << std::endl;
-//         return;
-//     }
-
-//     if (!std::filesystem::exists(file_path))
-//     {
-//         std::cerr << "Arquivo não encontrado." << std::endl;
-//         std::string error_msg = "ERROR: Arquivo não encontrado.";
-//         Packet error_packet = Packet::create_packet_cmd(error_msg);
-//         std::vector<uint8_t> error_packet_bytes = Packet::packet_to_bytes(error_packet);
-//         send(client_sock, error_packet_bytes.data(), error_packet_bytes.size(), 0);
-//         return;
-//     }
-
-//     FileInfo::send_file(file_path, client_sock);
-// }
-
-// void Server::handle_list_request(int client_sock)
-// {
-//     std::string username = getUsername(client_sock);
-//     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-//     std::string path = exec_path + "/users/sync_dir_" + username;
-
-//     cout << "Listando arquivos do diretório: " << path << endl;
-
-//     std::vector<FileInfo> files = FileInfo::list_files(path);
-//     FileInfo::send_list_files(files, client_sock);
-// }
