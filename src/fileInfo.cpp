@@ -67,7 +67,7 @@ string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
     int counter = 0;
     for (auto packet : packets)
     {
-        if (counter < 1)
+        if (counter < 2)
         {
             counter++;
             continue;
