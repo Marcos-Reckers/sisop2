@@ -71,7 +71,7 @@ public:
     void static send_cmd(std::string cmd, int sock);
 
 
-    static string receive_file(Threads::AtomicQueue<vector<Packet>> &received_queue, string dst_folder);
+    static string receive_file(vector<Packet> packets, string dst_folder);
     static FileInfo receive_file_info(vector<Packet> &received_packet);
     static vector<FileInfo> receive_list_server(Threads::AtomicQueue<std::vector<Packet>> &received_queue);
     

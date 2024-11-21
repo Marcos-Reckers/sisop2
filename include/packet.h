@@ -50,6 +50,7 @@ public:
     void set_total_size(uint32_t ts);
     void set_length(uint16_t len);
     void set_payload(const std::vector<char> &pl);
+    void clean_payload();
 };
 
 #endif // PACKET_H

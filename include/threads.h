@@ -29,7 +29,6 @@ namespace Threads
             const std::lock_guard<std::mutex> lock_guard(lock);
             if (resources.empty())
             {
-                // std::cout << "No resources to consume" << std::endl;
                 return std::nullopt;
             }
 
@@ -43,7 +42,6 @@ namespace Threads
             auto resource = this->consume();
             while (!resource.has_value())
             {
-                std::this_thread::yield();
                 resource = this->consume();
             }
             return resource.value();

@@ -45,11 +45,12 @@ void FileInfo::create_dir(string dir_name)
     }
 }
 
-string FileInfo::receive_file(Threads::AtomicQueue<std::vector<Packet>> &received_queue, string dst_folder)
+string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
 {
-    // Le da fila de pacotes recebidos e monta o arquivo:
-    auto received_packet = received_queue.consume_blocking();
-    FileInfo file_info = receive_file_info(received_packet);
+
+    std::cout << "ENTREI NO RECEIVE_FILE" << std::endl; 
+    
+    FileInfo file_info = receive_file_info(packets);
 
     file_info.print();
 
@@ -64,7 +65,7 @@ string FileInfo::receive_file(Threads::AtomicQueue<std::vector<Packet>> &receive
     }
     // Ignora dois primeiros pacotes, que soh tem informacao
     int counter = 0;
-    for (auto packet : received_packet)
+    for (auto packet : packets)
     {
         if (counter < 1)
         {
@@ -80,6 +81,7 @@ string FileInfo::receive_file(Threads::AtomicQueue<std::vector<Packet>> &receive
 
 FileInfo FileInfo::receive_file_info(vector<Packet> &received_packet)
 {
+    received_packet[1].clean_payload();
     FileInfo file_info = Packet::string_to_info(received_packet[1].get_payload());
     return file_info;
 }
@@ -338,3 +340,4 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     }
     return {};
 }
+

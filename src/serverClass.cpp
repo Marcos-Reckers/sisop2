@@ -94,6 +94,9 @@ void Server::acceptClients()
 
 void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
+    vector<Packet> packets_to_recv_queue;
+    vector<Packet> packets_to_sync_queue;
+
     while (client_sock > 0)
     {
         // consumir do send_queue e enviar para o servidor na sock
@@ -113,11 +116,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             }
         }
 
-        // pegar da sock e colocar na received_queue ou sync_queue
-
-        vector<Packet> packets_to_queue;
-
-        ssize_t total_bytes = Packet::packet_base_size() + 4096;
+        ssize_t total_bytes = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
         ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
@@ -130,35 +129,33 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         }
         else if (received_bytes > 0)
         {
-            cout << "Pacote recebido tamanho:" << received_bytes << endl;
-
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-            received_packet.print();
+            cout << "Recebeu pacote " << received_packet.get_seqn() << " de tamanho: " << received_bytes << endl;
             if (received_packet.get_type() == 1)
             {
-                // while not seqn = total_size
                 if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
                 {
-                    std::cout << "ÚLTIMO PACOTE DO ARQUIVO" << std::endl;
-                    packets_to_queue.push_back(received_packet);
-                    received_queue.produce(packets_to_queue);
+                    packets_to_recv_queue.push_back(received_packet);
+                    received_queue.produce(packets_to_recv_queue);
+                    packets_to_recv_queue.clear();
                 }
                 else if (received_packet.get_seqn() < received_packet.get_total_size())
                 {
-                    std::cout << "PACOTE NÃO FINAL ADICIONADO A LISTA DE PACOTES" << std::endl;
-                    packets_to_queue.push_back(received_packet);
+                    packets_to_recv_queue.push_back(received_packet);
                 }
-
-                // get the packets from command, file_info, file_pkts until end_of_file and put in a vector<Packet> and add that to received_queue
-                // received_queue.produce({received_packet});
-                // std::cout << "Pacote tipo 1 recebido com sucesso." << std::endl;
-                // received_packet.print();
             }
             else if (received_packet.get_type() == 2)
             {
-                sync_queue.produce({received_packet});
-                std::cout << "Pacote tipo 2 recebido com sucesso." << std::endl;
-                received_packet.print();
+                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                {
+                    packets_to_sync_queue.push_back(received_packet);
+                    sync_queue.produce(packets_to_sync_queue);
+                    packets_to_sync_queue.clear();
+                }
+                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                {
+                    packets_to_sync_queue.push_back(received_packet);
+                }
             }
             else if (received_packet.get_type() == 3)
             {
@@ -249,14 +246,16 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
     while (client_sock > 0)
     {
         cout << "Esperando comando" << endl;
-        auto packet = received_queue.consume_blocking();
-        cout << "Comando recebido: " << endl;
-        if (packet[0].get_type() == 1)
+        auto packets = received_queue.consume_blocking();
+        packets[0].clean_payload();
+        cout << "Comando recebido: " << packets[0].get_payload_as_string() << endl;
+        if (packets[0].get_type() == 1)
         {
-            string cmd = packet[0].get_payload_as_string();
+            string cmd = packets[0].get_payload_as_string();
             if (cmd == "upload")
             {
-                string file_name = FileInfo::receive_file(received_queue, folder_name);
+                std::cout << "ENTREI NO UPLOAD" << std::endl;
+                string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
             }
             else if (cmd == "download")
@@ -304,14 +303,14 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
 
     while (client_sock > 0)
     {
-        auto packet = sync_queue.consume_blocking();
-        if (packet[0].get_type() == 1)
+        auto packets = sync_queue.consume_blocking();
+        if (packets[0].get_type() == 1)
         {
-            string cmd = packet[0].get_payload_as_string();
+            string cmd = packets[0].get_payload_as_string();
             if (cmd == "upload")
             {
                 // le a lista de pacotes e monta o arquivo
-                string file_name = FileInfo::receive_file(sync_queue, folder_name);
+                string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
             }
             else if (cmd == "download")

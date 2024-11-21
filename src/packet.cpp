@@ -220,3 +220,10 @@ std::string Packet::get_payload_as_string() const
 {
     return std::string(payload.begin(), payload.end());
 }
+
+void Packet::clean_payload()
+{
+    string dirty_payload = get_payload_as_string();
+    string clean_payload = dirty_payload.substr(0, dirty_payload.find('|'));
+    set_payload(vector<char>(clean_payload.begin(), clean_payload.end()));
+}

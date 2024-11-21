@@ -169,95 +169,94 @@ int16_t Client::connect_to_server()
     return -3;
 }
 
-void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
-{
-    send_queue.produce(FileInfo::create_packet_vector("get_sync_dir"));
-    FileInfo::create_dir("sync_dir");
+// void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
+// {
+//     send_queue.produce(FileInfo::create_packet_vector("get_sync_dir"));
+//     FileInfo::create_dir("sync_dir");
 
-    send_queue.produce(FileInfo::create_packet_vector("list_server"));
-    vector<FileInfo> server_files = FileInfo::receive_list_server(received_queue);
-    FileInfo::print_list_files(server_files);
+//     send_queue.produce(FileInfo::create_packet_vector("list_server"));
+//     vector<FileInfo> server_files = FileInfo::receive_list_server(received_queue);
+//     FileInfo::print_list_files(server_files);
 
-    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    std::string path = exec_path + "/" + "sync_dir";
-    vector<FileInfo> client_files = FileInfo::list_files(path);
+//     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+//     std::string path = exec_path + "/" + "sync_dir";
+//     vector<FileInfo> client_files = FileInfo::list_files(path);
 
-    vector<FileInfo> files_to_upload;
-    for (auto client_file : client_files)
-    {
-        bool found = false;
-        for (auto server_file : server_files)
-        {
-            if (client_file.get_file_name() == server_file.get_file_name())
-            {
-                found = true;
-                string client_time = client_file.get_m_time();
-                string server_time = server_file.get_m_time();
-                int time = FileInfo::most_recent_time(client_time, server_time);
-                if (time == 1)
-                {
-                    files_to_upload.push_back(client_file);
-                }
-            }
-        }
-        if (!found)
-        {
-            files_to_upload.push_back(client_file);
-        }
-    }
+//     vector<FileInfo> files_to_upload;
+//     for (auto client_file : client_files)
+//     {
+//         bool found = false;
+//         for (auto server_file : server_files)
+//         {
+//             if (client_file.get_file_name() == server_file.get_file_name())
+//             {
+//                 found = true;
+//                 string client_time = client_file.get_m_time();
+//                 string server_time = server_file.get_m_time();
+//                 int time = FileInfo::most_recent_time(client_time, server_time);
+//                 if (time == 1)
+//                 {
+//                     files_to_upload.push_back(client_file);
+//                 }
+//             }
+//         }
+//         if (!found)
+//         {
+//             files_to_upload.push_back(client_file);
+//         }
+//     }
 
-    for (auto file : files_to_upload)
-    {
-        string file_path = path + "/" + file.get_file_name();
-        cout << "Enviando arquivo: " << file_path << endl;
-        send_queue.produce(FileInfo::create_packet_vector("upload", file_path));
-    }
+//     for (auto file : files_to_upload)
+//     {
+//         string file_path = path + "/" + file.get_file_name();
+//         cout << "Enviando arquivo: " << file_path << endl;
+//         send_queue.produce(FileInfo::create_packet_vector("upload", file_path));
+//     }
 
-    vector<FileInfo> files_to_download;
-    for (auto server_file : server_files)
-    {
-        bool found = false;
-        for (auto client_file : client_files)
-        {
-            if (server_file.get_file_name() == client_file.get_file_name())
-            {
-                found = true;
-                string client_time = client_file.get_m_time();
-                string server_time = server_file.get_m_time();
-                if (FileInfo::most_recent_time(client_time, server_time) == 2)
-                {
-                    files_to_download.push_back(server_file);
-                }
-            }
-        }
-        if (!found)
-        {
-            files_to_download.push_back(server_file);
-        }
-    }
+//     vector<FileInfo> files_to_download;
+//     for (auto server_file : server_files)
+//     {
+//         bool found = false;
+//         for (auto client_file : client_files)
+//         {
+//             if (server_file.get_file_name() == client_file.get_file_name())
+//             {
+//                 found = true;
+//                 string client_time = client_file.get_m_time();
+//                 string server_time = server_file.get_m_time();
+//                 if (FileInfo::most_recent_time(client_time, server_time) == 2)
+//                 {
+//                     files_to_download.push_back(server_file);
+//                 }
+//             }
+//         }
+//         if (!found)
+//         {
+//             files_to_download.push_back(server_file);
+//         }
+//     }
 
-    for (auto file : files_to_download)
-    {
-        send_queue.produce(FileInfo::create_packet_vector("download", file.get_file_name()));
-        // Le da fila de pacotes recebidos e monta o arquivo:
-        FileInfo::receive_file(received_queue, "sync_dir");
-        synced_files.insert(file.get_file_name());
-        cout << "Arquivo recebido com sucesso." << endl;
-    }
-}
+//     for (auto file : files_to_download)
+//     {
+//         send_queue.produce(FileInfo::create_packet_vector("download", file.get_file_name()));
+//         FileInfo::receive_file(packets, "sync_dir");
+//         synced_files.insert(file.get_file_name());
+//         cout << "Arquivo recebido com sucesso." << endl;
+//     }
+// }
 
 void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue, string folder_name)
 {
     while (this->sock > 0)
     {
-        auto packet = sync_queue.consume_blocking();
-        if (packet[0].get_type() == 1)
+        auto packets = sync_queue.consume_blocking();
+        if (packets[0].get_type() == 1)
         {
-            string cmd = packet[0].get_payload_as_string();
+            string cmd = packets[0].get_payload_as_string();
             if (cmd == "upload")
             {
                 // le a lista de pacotes e monta o arquivo
-                string file_name = FileInfo::receive_file(sync_queue, folder_name);
+                string file_name = FileInfo::receive_file(packets, folder_name);
                 synced_files.insert(file_name);
             }
             else if (cmd == "download")
@@ -271,8 +270,8 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, 
             }
             else if (cmd == "delete")
             {
-                auto sync_packet = sync_queue.consume_blocking();
-                FileInfo file_info = FileInfo::receive_file_info(sync_packet);
+                auto packets = sync_queue.consume_blocking();
+                FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
                 FileInfo::delete_file(file_name);
             }
@@ -331,7 +330,8 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
                 // envia o comando e o nome do arquivo para a fila de pacotes a serem enviados
                 send_queue.produce(FileInfo::create_packet_vector("download", file_name));
                 // Le da fila de pacotes recebidos e monta o arquivo:
-                FileInfo::receive_file(received_queue, "sync_dir");
+                auto packets = received_queue.consume_blocking();
+                FileInfo::receive_file(packets, "sync_dir");
                 cout << "Arquivo recebido com sucesso." << endl;
             }
             else
