@@ -114,13 +114,15 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         }
 
         // pegar da sock e colocar na received_queue ou sync_queue
-        std::vector<uint8_t> packet_bytes;
+        ssize_t total_size = Packet::packet_base_size() + 4096;
+        std::vector<uint8_t> packet_bytes(total_size);
+
         ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-        if (received_bytes < 0)
-        {
-            std::cerr << "Erro ao receber pacote." << std::endl;
-        }
-        else if (received_bytes > 0)
+        // if (received_bytes < 0)
+        // {
+        //     std::cerr << "Erro ao receber pacote." << std::endl;
+        // }
+        if (received_bytes > 0)
         {
             cout << "Pacote recebido:"<< "tamanho:" << received_bytes << endl;
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
@@ -186,13 +188,13 @@ void Server::handle_communication(int client_sock)
 
         // cria as threds
         //  ===================================================================
-        //  criathread de sync
         auto client_folder = "sync_dir_" + getUsername(client_sock);
-        std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
-                                { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
         // cria thread de comandos
         std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
+        //  criathread de sync
+        std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
+                                { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
         // cria thread de monitoramento
         std::thread monitor_thread([&client_sock, client_folder, &send_queue]()
                                    { Server::monitor_sync_dir(client_sock, client_folder, send_queue); });
@@ -264,7 +266,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
 void Server::create_sync_dir(int client_fd)
 {
     std::string username = getUsername(client_fd);
-    std::string dir_path = "users/sync_dir_" + username;
+    std::string dir_path = "sync_dir_" + username;
     FileInfo::create_dir(dir_path);
 }
 

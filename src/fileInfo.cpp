@@ -258,7 +258,7 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
     size_t total = 0;
     const char *ptr = (const char *)buf;
     while (total < len)
-    {
+    {   
         ssize_t sent = send(sockfd, ptr + total, len - total, flags);
         if (sent <= 0)
             return sent;
