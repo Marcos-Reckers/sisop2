@@ -65,17 +65,25 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
 
 Packet Packet::create_packet_cmd(const std::string &command)
 {
+    std::vector<char> payload = std::vector<char>(command.begin(), command.end());
+    // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
+    int complete_payload = 4106 - (packet_base_size() + payload.size());
+    for (int i = 0; i < complete_payload; i++)
+    {
+        payload.push_back('|');
+    }
+
     if (command.find("response") != std::string::npos)
     {
-        return Packet(2, 0, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+        return Packet(2, 0, 1, payload.size(), payload);
     }
     else if (command.find("exit") != std::string::npos)
     {
-        return Packet(3, 0, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+        return Packet(3, 0, 1, payload.size(), payload);
     }
     else
     {
-        return Packet(1, 0, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+        return Packet(1, 0, 1, payload.size(), payload);
     }
 }
 
@@ -87,7 +95,7 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data, in
     for (int i = 0; i < num_packets; ++i)
     {
         int payload_size = std::min(MAX_PAYLOAD_SIZE, static_cast<int>(data.size() - i * MAX_PAYLOAD_SIZE));
-        packets.emplace_back(type, i + 2, num_packets, payload_size,
+        packets.emplace_back(type, i + 2, num_packets + 2, payload_size,
                              std::vector<char>(data.begin() + i * MAX_PAYLOAD_SIZE,
                                                data.begin() + i * MAX_PAYLOAD_SIZE + payload_size));
     }
@@ -104,6 +112,12 @@ Packet Packet::create_packet_info(FileInfo &file_info, int type)
     pkt.set_total_size(1);
 
     std::vector<char> payload = info_to_string(file_info);
+    // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
+    int complete_payload = 4106 - (packet_base_size() + payload.size());
+    for (int i = 0; i < complete_payload; i++)
+    {
+        payload.push_back('|');
+    }
     pkt.set_length(payload.size());
     pkt.set_payload(payload);
 

@@ -182,18 +182,34 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
     return total;
 }
 
-ssize_t FileInfo::recvAll(int sockfd, void *buf, size_t len, int flags)
+ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data)
 {
-    size_t total = 0;
-    char *ptr = (char *)buf;
-    while (total < len)
+    // Leia o tamanho do pacote (supondo que seja um uint32_t no início)
+    uint32_t packet_size;
+    ssize_t received = recv(sockfd, &packet_size, sizeof(packet_size), 0);
+    if (received <= 0)
     {
-        ssize_t received = recv(sockfd, ptr + total, len - total, flags);
-        if (received <= 0)
-            return received;
-        total += received;
+        return received; // Erro ou conexão fechada
     }
-    return total;
+
+    packet_size = ntohl(packet_size); // Converter para endianidade de host, se necessário
+
+    // Redimensione o vetor para o tamanho do pacote
+    packet_data.resize(packet_size);
+
+    // Leia o restante do pacote
+    ssize_t total_received = 0;
+    while (total_received < packet_size)
+    {
+        received = recv(sockfd, packet_data.data() + total_received, packet_size - total_received, 0);
+        if (received <= 0)
+        {
+            return received; // Erro ou conexão fechada
+        }
+        total_received += received;
+    }
+
+    return total_received;
 }
 
 int FileInfo::most_recent_time(std::string time1, std::string time2)

@@ -28,12 +28,8 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         // pegar da sock e colocar na received_queue ou sync_queue
         std::vector<uint8_t> packet_bytes;
 
-        ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
-        if (received_bytes < 0)
-        {
-            std::cerr << "Erro ao receber pacote." << std::endl;
-        }
-        else if (received_bytes != 0)
+        ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
+        if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             if (received_packet.get_type() == 1)

@@ -119,7 +119,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
         ssize_t total_bytes = Packet::packet_base_size() + 4096;
         std::vector<uint8_t> packet_bytes(total_bytes);
-        // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+        // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
         ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes == 0)
@@ -130,23 +130,23 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         }
         else if (received_bytes > 0)
         {
-            // cout << "Pacote recebido:" << "tamanho:" << received_bytes << endl;
+            cout << "Pacote recebido tamanho:" << received_bytes << endl;
+
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
+            received_packet.print();
             if (received_packet.get_type() == 1)
             {
                 // while not seqn = total_size
-                if (received_packet.get_seqn() != received_packet.get_total_size())
+                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
                 {
-                    packets_to_queue.push_back(received_packet);
-                    received_packet.print();
-                    continue;
-                }
-                else if (received_packet.get_seqn() == received_packet.get_total_size())
-                {
-                    packets_to_queue.push_back(received_packet);
                     std::cout << "ÚLTIMO PACOTE DO ARQUIVO" << std::endl;
-                    received_packet.print();
+                    packets_to_queue.push_back(received_packet);
                     received_queue.produce(packets_to_queue);
+                }
+                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                {
+                    std::cout << "PACOTE NÃO FINAL ADICIONADO A LISTA DE PACOTES" << std::endl;
+                    packets_to_queue.push_back(received_packet);
                 }
 
                 // get the packets from command, file_info, file_pkts until end_of_file and put in a vector<Packet> and add that to received_queue

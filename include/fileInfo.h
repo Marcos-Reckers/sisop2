@@ -63,16 +63,11 @@ public:
     vector<Packet> static create_packet_vector(string command, string file_path_or_file_name = "");
 
     static int most_recent_time(std::string time1, std::string time2);
-
-    void static send_file(string file_path, int client_sock);
-    void static send_file_info(int client_sock, std::string file_path);
     void static create_dir(string dir_name);
 
     vector<FileInfo> static list_files(string path);
-    void static send_list_files(vector<FileInfo> files, int socket);
     void static print_list_files(vector<FileInfo> files);
     void static delete_file(string file_path);
-    void static send_file_name(string file_path, int sock);
     void static send_cmd(std::string cmd, int sock);
 
 
@@ -82,7 +77,7 @@ public:
     
 
     static ssize_t sendAll(int sockfd, const void *buf, size_t len, int flags);
-    static ssize_t recvAll(int sockfd, void *buf, size_t len, int flags);
+    static ssize_t recvAll(int sockfd, std::vector<uint8_t> &packet_data);
 };
 
 #endif // FILEINFO_H
