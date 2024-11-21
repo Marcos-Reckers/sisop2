@@ -208,7 +208,7 @@ void Server::handle_communication(int client_sock)
         // cria thread de comandos
         std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
-        //  criathread de sync
+        // //  criathread de sync
         std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
                                 { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
         // cria thread de monitoramento
