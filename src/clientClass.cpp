@@ -4,91 +4,17 @@ Client::Client(string username, struct hostent *server, string server_port) : us
 
 void Client::set_sock(int sock) { this->sock = sock; }
 
-void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
-{
-    vector<Packet> packets_to_recv_queue;
-    vector<Packet> packets_to_sync_queue;
-
-    while (this->sock > 0)
-    {
-        // consumir do send_queue e enviar para o servidor na sock
-        auto maybe_packet = send_queue.consume();
-        if (maybe_packet.has_value())
-        {
-            auto packet = maybe_packet.value();
-            for (auto pkt : packet)
-            {
-                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
-                if (sent_bytes < 0)
-                {
-                    std::cerr << "Erro ao enviar pacote." << std::endl;
-                }
-                std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
-            }
-        }
-
-        ssize_t total_bytes = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
-        std::vector<uint8_t> packet_bytes(total_bytes);
-        ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
-
-        if (received_bytes > 0)
-        {
-            Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-            cout << "Recebeu pacote " << received_packet.get_seqn() << " de tamanho: " << received_bytes << endl;
-            received_packet.print();
-            
-            if (received_packet.get_type() == 1)
-            {
-                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
-                {
-                    packets_to_recv_queue.push_back(received_packet);
-                    received_queue.produce(packets_to_recv_queue);
-                    packets_to_recv_queue.clear();
-                }
-                else if (received_packet.get_seqn() < received_packet.get_total_size())
-                {
-                    packets_to_recv_queue.push_back(received_packet);
-                }
-            }
-            else if (received_packet.get_type() == 2)
-            {
-                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
-                {
-                    packets_to_sync_queue.push_back(received_packet);
-                    sync_queue.produce(packets_to_sync_queue);
-                    packets_to_sync_queue.clear();
-                }
-                else if (received_packet.get_seqn() < received_packet.get_total_size())
-                {
-                    packets_to_sync_queue.push_back(received_packet);
-                }
-            }
-            else if (received_packet.get_type() == 3)
-            {
-                std::cout << "Conexão encerrada." << std::endl;
-                close(this->sock);
-                this->sock = -1;
-                return;
-            }
-            else
-            {
-                std::cerr << "Pacote recebido com tipo inválido." << std::endl;
-                received_packet.print();
-            }
-        }
-    }
-}
 
 void Client::handle_connection()
 {
     this->sock = this->connect_to_server();
-
     char buffer[256];
-    recv(sock, buffer, 256, 0);
+    recv(this->sock, buffer, 256, 0);
     if (strcmp(buffer, "exit") == 0)
     {
-        close(this->sock);
+        std::cout << "Não é possível conectar mais do que 2 dispositivos simultâneos." << std::endl;
+        this->sock = -1;
+        return;
     }
 
     if (this->sock > 0)
@@ -145,6 +71,7 @@ void Client::handle_connection()
         sync_thread.join();
         command_thread.join();
         monitor_thread.join();
+        close(this->sock);
 
         return;
     }
@@ -179,15 +106,6 @@ int16_t Client::connect_to_server()
         {
             std::string username_with_null = username + '\0';
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
-
-            // TODO: Verificar se tem mais que dois dispositivos conectados
-            // reimplementar end_connection
-            if (end_connection())
-            {
-                cout << "Não é possível conectar mais do que 2 dispositivos simultâneos." << endl;
-                return -2;
-            }
-
             return curr_sock;
         }
         else
@@ -201,6 +119,83 @@ int16_t Client::connect_to_server()
     cout << "Falha na conexão TIMEOUT" << endl;
     close(sock);
     return -3;
+}
+
+
+void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+{
+    vector<Packet> packets_to_recv_queue;
+    vector<Packet> packets_to_sync_queue;
+
+    while (this->sock > 0)
+    {
+        // consumir do send_queue e enviar para o servidor na sock
+        auto maybe_packet = send_queue.consume();
+        if (maybe_packet.has_value())
+        {
+            auto packet = maybe_packet.value();
+            for (auto pkt : packet)
+            {
+                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
+                if (sent_bytes < 0)
+                {
+                    std::cerr << "Erro ao enviar pacote." << std::endl;
+                }
+                std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+            }
+        }
+
+        ssize_t total_bytes = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+        std::vector<uint8_t> packet_bytes(total_bytes);
+        ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
+
+        if (received_bytes > 0)
+        {
+            Packet received_packet = Packet::bytes_to_packet(packet_bytes);
+            cout << "Recebeu pacote " << received_packet.get_seqn() << " de tamanho: " << received_bytes << endl;
+            received_packet.print();
+
+            if (received_packet.get_type() == 1)
+            {
+                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                {
+                    packets_to_recv_queue.push_back(received_packet);
+                    received_queue.produce(packets_to_recv_queue);
+                    packets_to_recv_queue.clear();
+                }
+                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                {
+                    packets_to_recv_queue.push_back(received_packet);
+                }
+            }
+            else if (received_packet.get_type() == 2)
+            {
+                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                {
+                    packets_to_sync_queue.push_back(received_packet);
+                    sync_queue.produce(packets_to_sync_queue);
+                    packets_to_sync_queue.clear();
+                }
+                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                {
+                    packets_to_sync_queue.push_back(received_packet);
+                }
+            }
+            else if (received_packet.get_type() == 3)
+            {
+                std::cout << "Conexão encerrada." << std::endl;
+                this->sock = -1;
+                return;
+            }
+            else
+            {
+                std::cerr << "Pacote recebido com tipo inválido." << std::endl;
+                received_packet.print();
+            }
+        }
+    }
+    return;
 }
 
 // void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
@@ -311,6 +306,7 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, 
             }
         }
     }
+    return;
 }
 
 void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
@@ -397,6 +393,8 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             std::cerr << "Comando inválido." << std::endl;
         }
     }
+
+    return;
 }
 
 void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue)
@@ -477,9 +475,5 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
     delete[] buffer;
     inotify_rm_watch(fd, wd);
     close(fd);
-}
-
-bool Client::end_connection()
-{
-    return false;
+    return;
 }

@@ -69,6 +69,7 @@ void Server::acceptClients()
             {
                 std::cout << "O usuário " << username_str << " já possui duas sessões ativas. Conexão não permitida." << std::endl;
                 send(client_fd, "exit", 4, 0);
+                continue;
             }
             else
             {
