@@ -12,7 +12,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
         {
-            cout << "Enviando pacote" << endl;
             auto packet = maybe_packet.value();
             for (auto pkt : packet)
             {
@@ -91,9 +90,8 @@ void Client::handle_connection()
         // ===================================================================
 
         std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
-                                   { this->handle_io(send_queue, received_queue, sync_queue); });
+                              { this->handle_io(send_queue, received_queue, sync_queue); });
 
-        
         // pega os arquivos do servidor e do cliente e sincroniza
         // ===================================================================
         // cria thread de comandos
@@ -105,10 +103,10 @@ void Client::handle_connection()
         // cria thread de monitoramento
         std::thread monitor_thread([this, &send_queue]()
                                    { this->monitor_sync_dir("sync_dir", send_queue); });
-        cout << "Sincronizando diretórios..." << endl;
-        get_sync_dir(send_queue, received_queue);
-        //  ===================================================================
-        cout << "Sincronização inicial concluída. (pos get_sync_dir)" << endl;
+        // cout << "Sincronizando diretórios..." << endl;
+        // get_sync_dir(send_queue, received_queue);
+        // //  ===================================================================
+        // cout << "Sincronização inicial concluída. (pos get_sync_dir)" << endl;
         // cria as threds
         //  ===================================================================
         // ===================================================================

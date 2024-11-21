@@ -114,25 +114,51 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         }
 
         // pegar da sock e colocar na received_queue ou sync_queue
-        ssize_t total_size = Packet::packet_base_size() + 4096;
-        std::vector<uint8_t> packet_bytes(total_size);
 
-        ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-        // if (received_bytes < 0)
-        // {
-        //     std::cerr << "Erro ao receber pacote." << std::endl;
-        // }
-        if (received_bytes > 0)
+        vector<Packet> packets_to_queue;
+
+        ssize_t total_bytes = Packet::packet_base_size() + 4096;
+        std::vector<uint8_t> packet_bytes(total_bytes);
+        // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+        ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+
+        if (received_bytes == 0)
         {
-            cout << "Pacote recebido:"<< "tamanho:" << received_bytes << endl;
+            std::cerr << "Conexão encerrada pelo cliente." << std::endl;
+            close(client_sock);
+            client_sock = -1;
+        }
+        else if (received_bytes > 0)
+        {
+            // cout << "Pacote recebido:" << "tamanho:" << received_bytes << endl;
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             if (received_packet.get_type() == 1)
             {
-                sync_queue.produce({received_packet});
+                // while not seqn = total_size
+                if (received_packet.get_seqn() != received_packet.get_total_size())
+                {
+                    packets_to_queue.push_back(received_packet);
+                    received_packet.print();
+                    continue;
+                }
+                else if (received_packet.get_seqn() == received_packet.get_total_size())
+                {
+                    packets_to_queue.push_back(received_packet);
+                    std::cout << "ÚLTIMO PACOTE DO ARQUIVO" << std::endl;
+                    received_packet.print();
+                    received_queue.produce(packets_to_queue);
+                }
+
+                // get the packets from command, file_info, file_pkts until end_of_file and put in a vector<Packet> and add that to received_queue
+                // received_queue.produce({received_packet});
+                // std::cout << "Pacote tipo 1 recebido com sucesso." << std::endl;
+                // received_packet.print();
             }
             else if (received_packet.get_type() == 2)
             {
-                received_queue.produce({received_packet});
+                sync_queue.produce({received_packet});
+                std::cout << "Pacote tipo 2 recebido com sucesso." << std::endl;
+                received_packet.print();
             }
             else if (received_packet.get_type() == 3)
             {
@@ -143,6 +169,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             else
             {
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
+                received_packet.print();
             }
         }
     }
@@ -216,14 +243,14 @@ void Server::handle_communication(int client_sock)
 
 void Server::handle_commands(int &client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
 {
-    std::cout << "LIDANDO COM COMMANDS "<< client_sock << std::endl;
+    std::cout << "LIDANDO COM COMMANDS " << client_sock << std::endl;
     string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
     {
         cout << "Esperando comando" << endl;
         auto packet = received_queue.consume_blocking();
-        cout << "Comando recebido" << endl;
+        cout << "Comando recebido: " << endl;
         if (packet[0].get_type() == 1)
         {
             string cmd = packet[0].get_payload_as_string();

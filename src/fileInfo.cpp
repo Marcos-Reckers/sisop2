@@ -50,6 +50,9 @@ string FileInfo::receive_file(Threads::AtomicQueue<std::vector<Packet>> &receive
     // Le da fila de pacotes recebidos e monta o arquivo:
     auto received_packet = received_queue.consume_blocking();
     FileInfo file_info = receive_file_info(received_packet);
+
+    file_info.print();
+
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     string file_name = file_info.get_file_name();
     std::string save_path = exec_path + "/" + dst_folder + "/" + file_name;
@@ -101,70 +104,6 @@ vector<FileInfo> FileInfo::receive_list_server(Threads::AtomicQueue<std::vector<
     return file_infos;
 }
 
-void FileInfo::send_file(string file_path, int sock)
-{
-    send_file_info(sock, file_path);
-
-    std::vector<Packet> packets = Packet::create_packets_from_file(file_path);
-
-    if (packets.empty())
-    {
-        std::cout << "Arquivo vazio." << std::endl;
-        return;
-    }
-
-    // Envia conteudo do arquivo
-    for (Packet packet : packets)
-    {
-        std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-
-        //ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
-        ssize_t sent_bytes = sendAll(sock, packet_bytes.data(), packet_bytes.size(), 0);
-        if (sent_bytes < 0)
-        {
-            std::cout << "Erro ao enviar pacote." << std::endl;
-            return;
-        }
-
-        std::cout << "Pacote " << packet.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
-    }
-
-    std::cout << "Arquivo enviado com sucesso." << std::endl;
-}
-
-void FileInfo::send_file_name(string file_path, int sock)
-{
-    string file_name = std::filesystem::path(file_path).filename().string();
-    std::vector<uint8_t> file_name_bytes(file_name.begin(), file_name.end());
-    file_name_bytes.push_back('\0');
-
-    ssize_t sent_bytes = send(sock, file_name_bytes.data(), file_name_bytes.size(), 0);
-    if (sent_bytes < 0)
-    {
-        std::cerr << "Erro ao enviar nome do arquivo." << std::endl;
-        return;
-    }
-    std::cout << "Nome do arquivo enviado: " << file_name << std::endl;
-}
-
-void FileInfo::send_file_info(int sock, std::string file_path)
-{
-    FileInfo file_info;
-
-    file_info.retrieve_info_from_file(file_path);
-    file_info.print();
-
-    Packet packet = Packet::create_packet_info(file_info);
-
-    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-    ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
-
-    if (sent_bytes < 0)
-    {
-        std::cerr << "Erro ao enviar informações do arquivo." << std::endl;
-    }
-}
-
 vector<FileInfo> FileInfo::list_files(string path)
 {
     vector<FileInfo> files = {};
@@ -182,30 +121,6 @@ vector<FileInfo> FileInfo::list_files(string path)
             files.push_back(file_info);
         }
         return files;
-    }
-}
-
-void FileInfo::send_list_files(vector<FileInfo> files, int socket)
-{
-    for (FileInfo file : files)
-    {
-        Packet packet = Packet::create_packet_info(file);
-        std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-        ssize_t sent_bytes = sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
-
-        if (sent_bytes < 0)
-        {
-            std::cerr << "Erro ao enviar informações do arquivo." << std::endl;
-        }
-        packet.print();
-    }
-    Packet packet = Packet::create_packet_cmd("END_OF_LIST");
-    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(packet);
-    ssize_t sent_bytes = sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
-
-    if (sent_bytes < 0)
-    {
-        std::cerr << "Erro ao enviar informações do arquivo." << std::endl;
     }
 }
 
@@ -230,7 +145,7 @@ void FileInfo::delete_file(string file_path)
     {
         std::filesystem::remove(file_path);
     }
-    catch(const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
         return;
@@ -258,7 +173,7 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
     size_t total = 0;
     const char *ptr = (const char *)buf;
     while (total < len)
-    {   
+    {
         ssize_t sent = send(sockfd, ptr + total, len - total, flags);
         if (sent <= 0)
             return sent;
@@ -281,18 +196,21 @@ ssize_t FileInfo::recvAll(int sockfd, void *buf, size_t len, int flags)
     return total;
 }
 
-int FileInfo::most_recent_time(std::string time1, std::string time2) {
+int FileInfo::most_recent_time(std::string time1, std::string time2)
+{
     struct tm tm1 = {}, tm2 = {};
     time_t time1_t, time2_t;
 
     // Parse first time string
-    if (strptime(time1.c_str(), "%a %b %d %H:%M:%S %Y", &tm1) == NULL) {
+    if (strptime(time1.c_str(), "%a %b %d %H:%M:%S %Y", &tm1) == NULL)
+    {
         std::cerr << "Error: Failed to parse time1: " << time1 << std::endl;
         return -1;
     }
 
     // Parse second time string
-    if (strptime(time2.c_str(), "%a %b %d %H:%M:%S %Y", &tm2) == NULL) {
+    if (strptime(time2.c_str(), "%a %b %d %H:%M:%S %Y", &tm2) == NULL)
+    {
         std::cerr << "Error: Failed to parse time2: " << time2 << std::endl;
         return -1;
     }
@@ -301,41 +219,57 @@ int FileInfo::most_recent_time(std::string time1, std::string time2) {
     time1_t = mktime(&tm1);
     time2_t = mktime(&tm2);
 
-    if (time1_t == -1 || time2_t == -1) {
+    if (time1_t == -1 || time2_t == -1)
+    {
         std::cerr << "Error: Failed to convert tm to time_t." << std::endl;
         return -1;
     }
 
     // Compare times
-    if (difftime(time1_t, time2_t) > 0) {
-        return 1;       // time1 is more recent
-    } else if (difftime(time1_t, time2_t) < 0) {
-        return 2;       // time2 is more recent
-    } else {
-        return 0;       // times are equal
+    if (difftime(time1_t, time2_t) > 0)
+    {
+        return 1; // time1 is more recent
+    }
+    else if (difftime(time1_t, time2_t) < 0)
+    {
+        return 2; // time2 is more recent
+    }
+    else
+    {
+        return 0; // times are equal
     }
 }
 
 vector<Packet> FileInfo::create_packet_vector(string command, string file_path_or_file_name)
 {
     Packet pkt_cmd = Packet::create_packet_cmd(command);
+    int command_type = pkt_cmd.get_type();
 
     if (command == "upload" || command == "download_response")
     {
         FileInfo file_info;
         file_info.retrieve_info_from_file(file_path_or_file_name);
-        Packet pkt_file_info = Packet::create_packet_info(file_info);
+        Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
-        std::vector<Packet> pkt_files = Packet::create_packets_from_file(file_path_or_file_name);
+        std::vector<Packet> pkt_files = Packet::create_packets_from_file(file_path_or_file_name, command_type);
+
+        pkt_cmd.set_total_size(pkt_files.size() + 2);
+        pkt_file_info.set_total_size(pkt_files.size() + 2);
+
         pkt_files.insert(pkt_files.begin(), pkt_file_info);
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
+
         return pkt_files;
     }
     else if (command == "delete")
     {
         FileInfo file_info;
         file_info.set_file_name(file_path_or_file_name);
-        Packet pkt_file_info = Packet::create_packet_info(file_info);
+
+        Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
+
+        pkt_cmd.set_total_size(2);
+        pkt_file_info.set_total_size(2);
 
         std::vector<Packet> pkts;
         pkts.push_back(pkt_cmd);
@@ -347,18 +281,19 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         FileInfo file_info;
         file_info.set_file_name(file_path_or_file_name);
-        Packet pkt_file_info = Packet::create_packet_info(file_info);
+        Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
         std::vector<Packet> pkts;
         pkts.push_back(pkt_cmd);
         pkts.push_back(pkt_file_info);
 
-        return pkts;   
+        return pkts;
     }
     else if (command == "list_server")
     {
         vector<Packet> solo_pkt;
         solo_pkt.push_back(pkt_cmd);
+        pkt_cmd.print();
         return solo_pkt;
     }
     else if (command == "list_client")
@@ -379,11 +314,11 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         vector<FileInfo> files = list_files(file_path_or_file_name);
         for (FileInfo file : files)
         {
-            Packet pkt_file_info = Packet::create_packet_info(file);
+            Packet pkt_file_info = Packet::create_packet_info(file, command_type);
             pkt_files.push_back(pkt_file_info);
         }
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
         return pkt_files;
     }
     return {};
-} 
+}

@@ -67,19 +67,19 @@ Packet Packet::create_packet_cmd(const std::string &command)
 {
     if (command.find("response") != std::string::npos)
     {
-        return Packet(2, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+        return Packet(2, 0, 1, command.size(), std::vector<char>(command.begin(), command.end()));
     }
     else if (command.find("exit") != std::string::npos)
     {
-        return Packet(3, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+        return Packet(3, 0, 1, command.size(), std::vector<char>(command.begin(), command.end()));
     }
     else
     {
-        return Packet(1, 1, 1, command.size(), std::vector<char>(command.begin(), command.end()));
+        return Packet(1, 0, 1, command.size(), std::vector<char>(command.begin(), command.end()));
     }
 }
 
-std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data)
+std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data, int type)
 {
     std::vector<Packet> packets;
     int num_packets = std::ceil(data.size() / (float)MAX_PAYLOAD_SIZE);
@@ -87,7 +87,7 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data)
     for (int i = 0; i < num_packets; ++i)
     {
         int payload_size = std::min(MAX_PAYLOAD_SIZE, static_cast<int>(data.size() - i * MAX_PAYLOAD_SIZE));
-        packets.emplace_back(2, i, num_packets, payload_size,
+        packets.emplace_back(type, i + 2, num_packets, payload_size,
                              std::vector<char>(data.begin() + i * MAX_PAYLOAD_SIZE,
                                                data.begin() + i * MAX_PAYLOAD_SIZE + payload_size));
     }
@@ -95,11 +95,11 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data)
     return packets;
 }
 
-Packet Packet::create_packet_info(FileInfo &file_info)
+Packet Packet::create_packet_info(FileInfo &file_info, int type)
 {
     Packet pkt;
 
-    pkt.set_type(3);
+    pkt.set_type(type);
     pkt.set_seqn(1);
     pkt.set_total_size(1);
 
@@ -148,7 +148,7 @@ FileInfo Packet::string_to_info(const std::vector<char> &data)
     return file_info;
 }
 
-std::vector<Packet> Packet::create_packets_from_file(const std::string &file_path)
+std::vector<Packet> Packet::create_packets_from_file(const std::string &file_path, int type)
 {
     std::ifstream infile(file_path, std::ios::binary);
     std::vector<Packet> packets;
@@ -161,7 +161,7 @@ std::vector<Packet> Packet::create_packets_from_file(const std::string &file_pat
 
     std::vector<char> file_data((std::istreambuf_iterator<char>(infile)), std::istreambuf_iterator<char>());
 
-    packets = create_packet_data(file_data);
+    packets = create_packet_data(file_data, type);
 
     infile.close();
     return packets;

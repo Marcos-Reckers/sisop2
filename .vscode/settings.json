@@ -76,6 +76,7 @@
     "socket": "cpp",
     "future": "cpp",
     "regex": "cpp",
-    "set": "cpp"
+    "set": "cpp",
+    "cinttypes": "cpp"
   }
 }

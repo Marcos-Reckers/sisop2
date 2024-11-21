@@ -26,15 +26,15 @@ public:
     static Packet bytes_to_packet(const std::vector<uint8_t> &bytes);
 
     static Packet create_packet_cmd(const std::string &command);
-    static std::vector<Packet> create_packet_data(const std::vector<char> &data);
+    static std::vector<Packet> create_packet_data(const std::vector<char> &data, int type);
 
-    static Packet create_packet_info(FileInfo &file_info);
+    static Packet create_packet_info(FileInfo &file_info, int type);
     static std::vector<char> info_to_string(FileInfo &file_info);
     static FileInfo string_to_info(const std::vector<char> &data);
 
     static ssize_t packet_base_size();
 
-    static std::vector<Packet> create_packets_from_file(const std::string &file_path);
+    static std::vector<Packet> create_packets_from_file(const std::string &file_path, int type);
 
     void print() const;
 
