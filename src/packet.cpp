@@ -72,14 +72,13 @@ Packet Packet::create_packet_cmd(const std::string &command)
     {
         payload.push_back('|');
     }
-
-    if (command.find("response") != std::string::npos)
-    {
-        return Packet(2, 0, 1, payload.size(), payload);
-    }
-    else if (command.find("exit") != std::string::npos)
+    if (command.find("exit_response") != std::string::npos)
     {
         return Packet(3, 0, 1, payload.size(), payload);
+    }
+    else if (command.find("response") != std::string::npos)
+    {
+        return Packet(2, 0, 1, payload.size(), payload);
     }
     else
     {
@@ -139,7 +138,7 @@ FileInfo Packet::string_to_info(const std::vector<char> &data)
     if (tokens.size() != 5)
     {
         std::cerr << "Erro: Dados do pacote incompletos." << std::endl;
-        return FileInfo(); // Retorna um objeto FileInfo vazio em caso de erro
+        return FileInfo(); 
     }
 
     FileInfo file_info;

@@ -38,14 +38,12 @@ bool Server::start()
     }
 
     std::cout << "Servidor iniciado e aguardando conexões na porta " << port << "." << std::endl;
-    std::cout << "Sock " << server_fd << std::endl;
     return true;
 }
 
 // Método para aceitar conexões de clientes em novas threads
 void Server::acceptClients()
 {
-    std::cout << "Sock acceptClients " << server_fd << std::endl;
     while (true)
     {
         sockaddr_in client_addr;
@@ -157,12 +155,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     packets_to_sync_queue.push_back(received_packet);
                 }
             }
-            else if (received_packet.get_type() == 3)
-            {
-                std::cout << "Conexão encerrada pelo servidor." << std::endl;
-                close(client_sock);
-                client_sock = -1;
-            }
             else
             {
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
@@ -240,12 +232,11 @@ void Server::handle_communication(int client_sock)
 
 void Server::handle_commands(int &client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
 {
-    std::cout << "LIDANDO COM COMMANDS " << client_sock << std::endl;
+    std::cout << "LIDANDO COM COMANDOS" << std::endl;
     string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
     {
-        cout << "Esperando comando" << endl;
         auto packets = received_queue.consume_blocking();
         packets[0].clean_payload();
         cout << "Comando recebido: " << packets[0].get_payload_as_string() << endl;
@@ -254,14 +245,12 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             string cmd = packets[0].get_payload_as_string();
             if (cmd == "upload")
             {
-                std::cout << "ENTREI NO UPLOAD" << std::endl;
                 string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
             }
             else if (cmd == "download")
             {
-                auto download_packet = received_queue.consume_blocking();
-                FileInfo file_info = FileInfo::receive_file_info(download_packet);
+                FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 send_queue.produce(FileInfo::create_packet_vector("download_response", file_path));
@@ -269,10 +258,10 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             }
             else if (cmd == "delete")
             {
-                auto delete_packet = received_queue.consume_blocking();
-                FileInfo file_info = FileInfo::receive_file_info(delete_packet);
+                FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
-                FileInfo::delete_file(file_name);
+                string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                FileInfo::delete_file(file_path);
                 std::cout << "Arquivo deletado: " << file_name << std::endl;
             }
             else if (cmd == "list_server")
@@ -282,8 +271,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             }
             else if (cmd == "exit")
             {
-                close(client_sock);
-                send_queue.produce(FileInfo::create_packet_vector("exit", ""));
+                send_queue.produce(FileInfo::create_packet_vector("exit_response", ""));
             }
         }
     }
@@ -298,7 +286,7 @@ void Server::create_sync_dir(int client_fd)
 
 void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
-    std::cout << "LIDANDO COM SYNC " << client_sock << std::endl;
+    std::cout << "LIDANDO COM SYNC"  << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)

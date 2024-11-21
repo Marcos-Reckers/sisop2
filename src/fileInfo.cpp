@@ -47,9 +47,6 @@ void FileInfo::create_dir(string dir_name)
 
 string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
 {
-
-    std::cout << "ENTREI NO RECEIVE_FILE" << std::endl; 
-    
     FileInfo file_info = receive_file_info(packets);
 
     file_info.print();
@@ -63,7 +60,7 @@ string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
         std::cerr << "Erro ao abrir o arquivo: " << file_name << std::endl;
         return "";
     }
-    // Ignora dois primeiros pacotes, que soh tem informacao
+
     int counter = 0;
     for (auto packet : packets)
     {
@@ -138,7 +135,6 @@ void FileInfo::print_list_files(vector<FileInfo> files)
 
 void FileInfo::delete_file(string file_path)
 {
-
     if (!std::filesystem::exists(file_path))
     {
         std::cerr << "Erro ao deletar o arquivo, NOT FOUND." << std::endl;
@@ -283,6 +279,10 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         FileInfo file_info;
         file_info.set_file_name(file_path_or_file_name);
+        file_info.set_file_size(0);
+        file_info.set_m_time("0");
+        file_info.set_a_time("0");
+        file_info.set_c_time("0"); 
 
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
@@ -299,7 +299,15 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         FileInfo file_info;
         file_info.set_file_name(file_path_or_file_name);
+        file_info.set_file_size(0);
+        file_info.set_m_time("0");
+        file_info.set_a_time("0");
+        file_info.set_c_time("0");
+        file_info.print();
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
+
+        pkt_cmd.set_total_size(2);
+        pkt_file_info.set_total_size(2);
 
         std::vector<Packet> pkts;
         pkts.push_back(pkt_cmd);
@@ -330,13 +338,33 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         vector<Packet> pkt_files;
         vector<FileInfo> files = list_files(file_path_or_file_name);
+
+        pkt_cmd.set_seqn(0);
+
+        int counter = 1;
         for (FileInfo file : files)
         {
             Packet pkt_file_info = Packet::create_packet_info(file, command_type);
+            pkt_file_info.set_seqn(counter);
             pkt_files.push_back(pkt_file_info);
+            counter++;
         }
+
+        pkt_cmd.set_total_size(pkt_files.size() + 1);
+
+        for (Packet pkt : pkt_files)
+        {
+            pkt.set_total_size(pkt_files.size() + 1);
+        }
+
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
         return pkt_files;
+    }
+    else if (command == "exit_response")
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
     }
     return {};
 }

@@ -8,7 +8,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 {
     while (this->sock > 0)
     {
-        // consumir do send_queue e enviar para o servidor na sock
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
         {
@@ -42,7 +41,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             }
             else if (received_packet.get_type() == 3)
             {
-                std::cout << "Conexão encerrada pelo servidor." << std::endl;
+                std::cout << "Conexão encerrada." << std::endl;
                 close(this->sock);
                 this->sock = -1;
             }
@@ -53,6 +52,86 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         }
     }
 }
+
+// void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+// {
+//     vector<Packet> packets_to_recv_queue;
+//     vector<Packet> packets_to_sync_queue;
+
+//     while (this->sock > 0)
+//     {
+//         // consumir do send_queue e enviar para o servidor na sock
+//         auto maybe_packet = send_queue.consume();
+//         if (maybe_packet.has_value())
+//         {
+//             auto packet = maybe_packet.value();
+//             for (auto pkt : packet)
+//             {
+//                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+//                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
+//                 if (sent_bytes < 0)
+//                 {
+//                     std::cerr << "Erro ao enviar pacote." << std::endl;
+//                 }
+//                 std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+//             }
+//         }
+
+//         ssize_t total_bytes = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+//         std::vector<uint8_t> packet_bytes(total_bytes);
+//         // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
+//         ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
+
+//         if (received_bytes == 0)
+//         {
+//             std::cerr << "Conexão encerrada pelo cliente." << std::endl;
+//             close(this->sock);
+//             this->sock = -1;
+//         }
+//         else if (received_bytes > 0)
+//         {
+//             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
+//             cout << "Recebeu pacote " << received_packet.get_seqn() << " de tamanho: " << received_bytes << endl;
+//             if (received_packet.get_type() == 1)
+//             {
+//                 if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+//                 {
+//                     packets_to_recv_queue.push_back(received_packet);
+//                     received_queue.produce(packets_to_recv_queue);
+//                     packets_to_recv_queue.clear();
+//                 }
+//                 else if (received_packet.get_seqn() < received_packet.get_total_size())
+//                 {
+//                     packets_to_recv_queue.push_back(received_packet);
+//                 }
+//             }
+//             else if (received_packet.get_type() == 2)
+//             {
+//                 if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+//                 {
+//                     packets_to_sync_queue.push_back(received_packet);
+//                     sync_queue.produce(packets_to_sync_queue);
+//                     packets_to_sync_queue.clear();
+//                 }
+//                 else if (received_packet.get_seqn() < received_packet.get_total_size())
+//                 {
+//                     packets_to_sync_queue.push_back(received_packet);
+//                 }
+//             }
+//             else if (received_packet.get_type() == 3)
+//             {
+//                 std::cout << "Conexão encerrada." << std::endl;
+//                 close(this->sock);
+//                 this->sock = -1;
+//             }
+//             else
+//             {
+//                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
+//                 received_packet.print();
+//             }
+//         }
+//     }
+// }
 
 void Client::handle_connection()
 {
