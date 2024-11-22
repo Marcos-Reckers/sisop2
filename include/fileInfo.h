@@ -73,7 +73,7 @@ public:
 
     static string receive_file(vector<Packet> packets, string dst_folder);
     static FileInfo receive_file_info(vector<Packet> &received_packet);
-    static vector<FileInfo> receive_list_server(Threads::AtomicQueue<std::vector<Packet>> &received_queue);
+    static vector<FileInfo> receive_list_server(vector<Packet> packets);
     
 
     static ssize_t sendAll(int sockfd, const void *buf, size_t len, int flags);

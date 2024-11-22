@@ -111,7 +111,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 {
                     std::cerr << "Erro ao enviar pacote." << std::endl;
                 }
-                std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+                std::cout << "Pacote " << pkt.get_seqn() << "/" << pkt.get_total_size() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
             }
         }
 
@@ -210,17 +210,17 @@ void Server::handle_communication(int client_sock)
         std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
         // //  criathread de sync
-        std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
-                                { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
-        // cria thread de monitoramento
-        std::thread monitor_thread([&client_sock, client_folder, &send_queue]()
-                                   { Server::monitor_sync_dir(client_sock, client_folder, send_queue); });
+        // std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
+        //                         { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
+        // // cria thread de monitoramento
+        // std::thread monitor_thread([&client_sock, client_folder, &send_queue]()
+        //                            { Server::monitor_sync_dir(client_sock, client_folder, send_queue); });
         // ===================================================================
 
         io_thread.join();
-        sync_thread.join();
         command_thread.join();
-        monitor_thread.join();
+        // sync_thread.join();
+        // monitor_thread.join();
 
         return;
     }

@@ -153,8 +153,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-            cout << "Recebeu pacote " << received_packet.get_seqn() << " de tamanho: " << received_bytes << endl;
-            received_packet.print();
+            cout << "Recebeu pacote " << received_packet.get_seqn()<< "/" << received_packet.get_total_size()  << " de tipo " << received_packet.get_type() << " de tamanho: " << received_bytes << endl;
 
             if (received_packet.get_type() == 1)
             {
@@ -360,7 +359,6 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             {
                 // envia o comando e o nome do arquivo para a fila de pacotes a serem enviados
                 send_queue.produce(FileInfo::create_packet_vector("download", file_name));
-                // Le da fila de pacotes recebidos e monta o arquivo:
                 auto packets = received_queue.consume_blocking();
                 FileInfo::receive_file(packets, "downloads");
                 cout << "Arquivo recebido com sucesso." << endl;
@@ -372,9 +370,13 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         }
         else if (cmd.rfind("list_server", 0) == 0)
         {
-            // FileInfo::send_cmd("list_server", sock);
             send_queue.produce(FileInfo::create_packet_vector("list_server"));
-            vector<FileInfo> file_infos = FileInfo::receive_list_server(received_queue);
+            auto packets = received_queue.consume_blocking();
+            for (auto pkt : packets)
+            {
+                pkt.print();
+            }
+            vector<FileInfo> file_infos = FileInfo::receive_list_server(packets);
             FileInfo::print_list_files(file_infos);
         }
         else if (cmd.rfind("list_client", 0) == 0)

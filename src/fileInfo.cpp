@@ -84,20 +84,20 @@ FileInfo FileInfo::receive_file_info(vector<Packet> &received_packet)
     return file_info;
 }
 
-vector<FileInfo> FileInfo::receive_list_server(Threads::AtomicQueue<std::vector<Packet>> &received_queue)
+vector<FileInfo> FileInfo::receive_list_server(std::vector<Packet> packets)
 {
-    // Le da fila de pacotes recebidos e monta o arquivo:
-    auto received_packet = received_queue.consume_blocking();
+    std::cout << "ENTREI NO RECEIVE_LIST_SERVER" << std::endl;
     vector<FileInfo> file_infos;
     int counter = 0;
-    for (auto packet : received_packet)
+    for (auto packet : packets)
     {
-        // Ignora o primeiro pacote, que soh tem informacao
-        if (counter <= 1)
+        if (counter < 1)
         {
             counter++;
             continue;
         }
+        packet.clean_payload();
+        packet.print();
         FileInfo file_info = Packet::string_to_info(packet.get_payload());
         file_infos.push_back(file_info);
     }
@@ -283,7 +283,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         file_info.set_file_size(0);
         file_info.set_m_time("0");
         file_info.set_a_time("0");
-        file_info.set_c_time("0"); 
+        file_info.set_c_time("0");
 
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
@@ -320,7 +320,6 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         vector<Packet> solo_pkt;
         solo_pkt.push_back(pkt_cmd);
-        pkt_cmd.print();
         return solo_pkt;
     }
     else if (command == "list_client")
@@ -339,23 +338,25 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         vector<Packet> pkt_files;
         vector<FileInfo> files = list_files(file_path_or_file_name);
+        
+        pkt_cmd.set_seqn(1);
 
-        pkt_cmd.set_seqn(0);
-
-        int counter = 1;
+        int counter = 2;
         for (FileInfo file : files)
         {
+            file.print();
             Packet pkt_file_info = Packet::create_packet_info(file, command_type);
             pkt_file_info.set_seqn(counter);
             pkt_files.push_back(pkt_file_info);
             counter++;
         }
 
-        pkt_cmd.set_total_size(pkt_files.size() + 1);
+        int total_size = pkt_files.size() + 1;
+        pkt_cmd.set_total_size(total_size);
 
-        for (Packet pkt : pkt_files)
+        for (Packet &pkt : pkt_files)
         {
-            pkt.set_total_size(pkt_files.size() + 1);
+            pkt.set_total_size(total_size);
         }
 
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
@@ -369,4 +370,3 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     }
     return {};
 }
-
