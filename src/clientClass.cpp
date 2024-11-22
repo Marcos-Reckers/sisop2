@@ -316,6 +316,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         std::string cmd;
         std::cout << "Digite um comando: " << std::flush;
         std::getline(std::cin, cmd);
+
         if (cmd.rfind("upload", 0) == 0)
         {
             std::string file_path = cmd.substr(7);
@@ -361,7 +362,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
                 send_queue.produce(FileInfo::create_packet_vector("download", file_name));
                 // Le da fila de pacotes recebidos e monta o arquivo:
                 auto packets = received_queue.consume_blocking();
-                FileInfo::receive_file(packets, "sync_dir");
+                FileInfo::receive_file(packets, "downloads");
                 cout << "Arquivo recebido com sucesso." << endl;
             }
             else

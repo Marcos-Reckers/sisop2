@@ -47,6 +47,7 @@ void FileInfo::create_dir(string dir_name)
 
 string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
 {
+    FileInfo::create_dir(dst_folder);
     FileInfo file_info = receive_file_info(packets);
 
     file_info.print();

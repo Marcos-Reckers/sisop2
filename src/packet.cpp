@@ -76,7 +76,7 @@ Packet Packet::create_packet_cmd(const std::string &command)
     {
         return Packet(3, 0, 1, payload.size(), payload);
     }
-    else if (command.find("response") != std::string::npos)
+    else if (command.find("sync") != std::string::npos)
     {
         return Packet(2, 0, 1, payload.size(), payload);
     }

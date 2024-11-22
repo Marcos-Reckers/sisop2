@@ -74,4 +74,3 @@ $(TEST_BUILD_DIR):
 
 clean:
 	rm -rf $(BUILD_DIR)/*
-	rm -f $(TEST_BUILD_DIR)/myClient
