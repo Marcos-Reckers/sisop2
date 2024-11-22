@@ -111,11 +111,11 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 {
                     std::cerr << "Erro ao enviar pacote." << std::endl;
                 }
-                std::cout << "Pacote " << pkt.get_seqn() << "/" << pkt.get_total_size() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
             }
         }
 
-        ssize_t total_bytes = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+        ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
         ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
@@ -129,29 +129,29 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         else if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-            cout << "Recebeu pacote " << received_packet.get_seqn() << " de tamanho: " << received_bytes << endl;
+            cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tamanho: " << received_bytes << endl;
             if (received_packet.get_type() == 1)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
                     packets_to_recv_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                 }
             }
             else if (received_packet.get_type() == 2)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
                     sync_queue.produce(packets_to_sync_queue);
                     packets_to_sync_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
                 }
@@ -287,7 +287,7 @@ void Server::create_sync_dir(int client_fd)
 
 void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
-    std::cout << "LIDANDO COM SYNC"  << std::endl;
+    std::cout << "LIDANDO COM SYNC" << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
@@ -404,15 +404,15 @@ void Server::monitor_sync_dir(int &client_sock, string folder_name, Threads::Ato
 
     while (client_sock > 0)
     {
-        int length = read(fd, buffer, buf_size);
-        if (length < 0)
+        int payload_size = read(fd, buffer, buf_size);
+        if (payload_size < 0)
         {
             perror("read");
             break;
         }
 
         int i = 0;
-        while (i < length)
+        while (i < payload_size)
         {
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
             if (event->len)

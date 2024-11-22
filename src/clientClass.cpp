@@ -4,7 +4,6 @@ Client::Client(string username, struct hostent *server, string server_port) : us
 
 void Client::set_sock(int sock) { this->sock = sock; }
 
-
 void Client::handle_connection()
 {
     this->sock = this->connect_to_server();
@@ -121,7 +120,6 @@ int16_t Client::connect_to_server()
     return -3;
 }
 
-
 void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
     vector<Packet> packets_to_recv_queue;
@@ -142,41 +140,41 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 {
                     std::cerr << "Erro ao enviar pacote." << std::endl;
                 }
-                std::cout << "Pacote " << pkt.get_seqn() << " de tamanho: " << sent_bytes << " bytes enviado." << std::endl;
+                std::cout << "Enviado pacote " << pkt.get_seqn() << "/"  << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
             }
         }
 
-        ssize_t total_bytes = Packet::packet_base_size() + MAX_PAYLOAD_SIZE;
+        ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-            cout << "Recebeu pacote " << received_packet.get_seqn()<< "/" << received_packet.get_total_size()  << " de tipo " << received_packet.get_type() << " de tamanho: " << received_bytes << endl;
+            cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tipo " << received_packet.get_type() << " de tamanho: " << received_bytes << endl;
 
             if (received_packet.get_type() == 1)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets() - 1)
                 {
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
                     packets_to_recv_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                 }
             }
             else if (received_packet.get_type() == 2)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_size() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets() - 1)
                 {
                     packets_to_sync_queue.push_back(received_packet);
                     sync_queue.produce(packets_to_sync_queue);
                     packets_to_sync_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_size())
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
                 }
@@ -283,14 +281,12 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, 
             string cmd = packets[0].get_payload_as_string();
             if (cmd == "upload")
             {
-                // le a lista de pacotes e monta o arquivo
                 string file_name = FileInfo::receive_file(packets, folder_name);
                 synced_files.insert(file_name);
             }
             else if (cmd == "download")
             {
-                auto sync_packet = sync_queue.consume_blocking();
-                FileInfo file_info = FileInfo::receive_file_info(sync_packet);
+                FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
                 string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
@@ -298,7 +294,6 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, 
             }
             else if (cmd == "delete")
             {
-                auto packets = sync_queue.consume_blocking();
                 FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
                 FileInfo::delete_file(file_name);
@@ -372,10 +367,6 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         {
             send_queue.produce(FileInfo::create_packet_vector("list_server"));
             auto packets = received_queue.consume_blocking();
-            for (auto pkt : packets)
-            {
-                pkt.print();
-            }
             vector<FileInfo> file_infos = FileInfo::receive_list_server(packets);
             FileInfo::print_list_files(file_infos);
         }
@@ -428,15 +419,15 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
 
     while (this->sock > 0)
     {
-        int length = read(fd, buffer, buf_size);
-        if (length < 0)
+        int payload_size = read(fd, buffer, buf_size);
+        if (payload_size < 0)
         {
             perror("read");
             break;
         }
 
         int i = 0;
-        while (i < length)
+        while (i < payload_size)
         {
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
             if (event->len)

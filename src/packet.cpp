@@ -4,15 +4,15 @@
 #include <cstring>
 #include "fileInfo.h"
 
-Packet::Packet() : type(0), seqn(0), total_size(0), length(0), payload() {}
+Packet::Packet() : type(0), seqn(0), total_pakets(0), payload_size(0), payload() {}
 
-Packet::Packet(uint16_t type, uint16_t seqn, uint32_t total_size, uint16_t length, const std::vector<char> &payload)
-    : type(type), seqn(seqn), total_size(total_size), length(length), payload(payload) {}
+Packet::Packet(uint16_t type, uint16_t seqn, uint32_t total_pakets, uint16_t payload_size, const std::vector<char> &payload)
+    : type(type), seqn(seqn), total_pakets(total_pakets), payload_size(payload_size), payload(payload) {}
 
 std::vector<uint8_t> Packet::packet_to_bytes(const Packet &pkt)
 {
-    size_t totalSize = sizeof(pkt.type) + sizeof(pkt.seqn) + sizeof(pkt.total_size) +
-                       sizeof(pkt.length) + pkt.length;
+    size_t totalSize = sizeof(pkt.type) + sizeof(pkt.seqn) + sizeof(pkt.total_pakets) +
+                       sizeof(pkt.payload_size) + pkt.payload_size;
 
     std::vector<uint8_t> bytes(totalSize);
     size_t index = 0;
@@ -23,15 +23,15 @@ std::vector<uint8_t> Packet::packet_to_bytes(const Packet &pkt)
     std::memcpy(&bytes[index], &pkt.seqn, sizeof(pkt.seqn));
     index += sizeof(pkt.seqn);
 
-    std::memcpy(&bytes[index], &pkt.total_size, sizeof(pkt.total_size));
-    index += sizeof(pkt.total_size);
+    std::memcpy(&bytes[index], &pkt.total_pakets, sizeof(pkt.total_pakets));
+    index += sizeof(pkt.total_pakets);
 
-    std::memcpy(&bytes[index], &pkt.length, sizeof(pkt.length));
-    index += sizeof(pkt.length);
+    std::memcpy(&bytes[index], &pkt.payload_size, sizeof(pkt.payload_size));
+    index += sizeof(pkt.payload_size);
 
-    if (!pkt.payload.empty() && pkt.length > 0)
+    if (!pkt.payload.empty() && pkt.payload_size > 0)
     {
-        std::memcpy(&bytes[index], pkt.payload.data(), pkt.length);
+        std::memcpy(&bytes[index], pkt.payload.data(), pkt.payload_size);
     }
 
     return bytes;
@@ -48,16 +48,16 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
     std::memcpy(&pkt.seqn, &bytes[index], sizeof(pkt.seqn));
     index += sizeof(pkt.seqn);
 
-    std::memcpy(&pkt.total_size, &bytes[index], sizeof(pkt.total_size));
-    index += sizeof(pkt.total_size);
+    std::memcpy(&pkt.total_pakets, &bytes[index], sizeof(pkt.total_pakets));
+    index += sizeof(pkt.total_pakets);
 
-    std::memcpy(&pkt.length, &bytes[index], sizeof(pkt.length));
-    index += sizeof(pkt.length);
+    std::memcpy(&pkt.payload_size, &bytes[index], sizeof(pkt.payload_size));
+    index += sizeof(pkt.payload_size);
 
-    if (pkt.length > 0)
+    if (pkt.payload_size > 0)
     {
-        pkt.payload.resize(pkt.length);
-        std::memcpy(pkt.payload.data(), &bytes[index], pkt.length);
+        pkt.payload.resize(pkt.payload_size);
+        std::memcpy(pkt.payload.data(), &bytes[index], pkt.payload_size);
     }
 
     return pkt;
@@ -67,22 +67,22 @@ Packet Packet::create_packet_cmd(const std::string &command)
 {
     std::vector<char> payload = std::vector<char>(command.begin(), command.end());
     // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
-    int complete_payload = 4106 - (packet_base_size() + payload.size());
+    int complete_payload = packet_header_size() + MAX_PAYLOAD_SIZE - (packet_header_size() + payload.size());
     for (int i = 0; i < complete_payload; i++)
     {
         payload.push_back('|');
     }
     if (command.find("exit_response") != std::string::npos)
     {
-        return Packet(3, 0, 1, payload.size(), payload);
+        return Packet(3, 1, 1, payload.size(), payload);
     }
     else if (command.find("sync") != std::string::npos)
     {
-        return Packet(2, 0, 1, payload.size(), payload);
+        return Packet(2, 1, 1, payload.size(), payload);
     }
     else
     {
-        return Packet(1, 0, 1, payload.size(), payload);
+        return Packet(1, 1, 1, payload.size(), payload);
     }
 }
 
@@ -94,7 +94,7 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data, in
     for (int i = 0; i < num_packets; ++i)
     {
         int payload_size = std::min(MAX_PAYLOAD_SIZE, static_cast<int>(data.size() - i * MAX_PAYLOAD_SIZE));
-        packets.emplace_back(type, i + 2, num_packets + 2, payload_size,
+        packets.emplace_back(type, i + 3, num_packets + 2, payload_size,
                              std::vector<char>(data.begin() + i * MAX_PAYLOAD_SIZE,
                                                data.begin() + i * MAX_PAYLOAD_SIZE + payload_size));
     }
@@ -107,17 +107,17 @@ Packet Packet::create_packet_info(FileInfo &file_info, int type)
     Packet pkt;
 
     pkt.set_type(type);
-    pkt.set_seqn(1);
-    pkt.set_total_size(1);
+    pkt.set_seqn(2);
+    pkt.set_total_packets(2);
 
     std::vector<char> payload = info_to_string(file_info);
     // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
-    int complete_payload = 4106 - (packet_base_size() + payload.size());
+    int complete_payload = 4106 - (packet_header_size() + payload.size());
     for (int i = 0; i < complete_payload; i++)
     {
         payload.push_back('|');
     }
-    pkt.set_length(payload.size());
+    pkt.set_payload_size(payload.size());
     pkt.set_payload(payload);
 
     return pkt;
@@ -138,7 +138,7 @@ FileInfo Packet::string_to_info(const std::vector<char> &data)
     if (tokens.size() != 5)
     {
         std::cerr << "Erro: Dados do pacote incompletos." << std::endl;
-        return FileInfo(); 
+        return FileInfo();
     }
 
     FileInfo file_info;
@@ -184,24 +184,24 @@ void Packet::print() const
 {
     std::cout << "Type: " << type << "\n";
     std::cout << "SeqNum: " << seqn << "\n";
-    std::cout << "Total size: " << total_size << "\n";
-    std::cout << "Length: " << length << "\n";
+    std::cout << "Total size: " << total_pakets << "\n";
+    std::cout << "Length: " << payload_size << "\n";
     std::cout << "Payload: " << std::string(payload.begin(), payload.end()) << "\n";
 }
 
-ssize_t Packet::packet_base_size() { return sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint16_t); }
+ssize_t Packet::packet_header_size() { return sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint16_t); }
 
 uint16_t Packet::get_type() const { return type; }
 uint16_t Packet::get_seqn() const { return seqn; }
-uint32_t Packet::get_total_size() const { return total_size; }
-uint16_t Packet::get_length() const { return length; }
+uint32_t Packet::get_total_packets() const { return total_pakets; }
+uint16_t Packet::get_payload_size() const { return payload_size; }
 const std::vector<char> &Packet::get_payload() const { return payload; }
 
 void Packet::set_type(uint16_t t) { type = t; }
-void Packet::set_seqn(uint16_t s) { seqn = s; }
-void Packet::set_total_size(uint32_t ts) { total_size = ts; }
-void Packet::set_length(uint16_t len) { length = len; }
-void Packet::set_payload(const std::vector<char> &pl) { payload = pl; }
+void Packet::set_seqn(uint16_t n) { seqn = n; }
+void Packet::set_total_packets(uint32_t n_total) { total_pakets = n_total; }
+void Packet::set_payload_size(uint16_t payload_s) { payload_size = payload_s; }
+void Packet::set_payload(const std::vector<char> &payload_content) { payload = payload_content; }
 
 std::vector<char> Packet::info_to_string(FileInfo &file_info)
 {

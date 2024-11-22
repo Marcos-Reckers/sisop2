@@ -86,7 +86,6 @@ FileInfo FileInfo::receive_file_info(vector<Packet> &received_packet)
 
 vector<FileInfo> FileInfo::receive_list_server(std::vector<Packet> packets)
 {
-    std::cout << "ENTREI NO RECEIVE_LIST_SERVER" << std::endl;
     vector<FileInfo> file_infos;
     int counter = 0;
     for (auto packet : packets)
@@ -97,7 +96,6 @@ vector<FileInfo> FileInfo::receive_list_server(std::vector<Packet> packets)
             continue;
         }
         packet.clean_payload();
-        packet.print();
         FileInfo file_info = Packet::string_to_info(packet.get_payload());
         file_infos.push_back(file_info);
     }
@@ -268,8 +266,8 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
 
         std::vector<Packet> pkt_files = Packet::create_packets_from_file(file_path_or_file_name, command_type);
 
-        pkt_cmd.set_total_size(pkt_files.size() + 2);
-        pkt_file_info.set_total_size(pkt_files.size() + 2);
+        pkt_cmd.set_total_packets(pkt_files.size() + 2);
+        pkt_file_info.set_total_packets(pkt_files.size() + 2);
 
         pkt_files.insert(pkt_files.begin(), pkt_file_info);
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
@@ -287,8 +285,8 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
 
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
-        pkt_cmd.set_total_size(2);
-        pkt_file_info.set_total_size(2);
+        pkt_cmd.set_total_packets(2);
+        pkt_file_info.set_total_packets(2);
 
         std::vector<Packet> pkts;
         pkts.push_back(pkt_cmd);
@@ -307,8 +305,8 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         file_info.print();
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
-        pkt_cmd.set_total_size(2);
-        pkt_file_info.set_total_size(2);
+        pkt_cmd.set_total_packets(2);
+        pkt_file_info.set_total_packets(2);
 
         std::vector<Packet> pkts;
         pkts.push_back(pkt_cmd);
@@ -338,7 +336,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     {
         vector<Packet> pkt_files;
         vector<FileInfo> files = list_files(file_path_or_file_name);
-        
+
         pkt_cmd.set_seqn(1);
 
         int counter = 2;
@@ -351,12 +349,12 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
             counter++;
         }
 
-        int total_size = pkt_files.size() + 1;
-        pkt_cmd.set_total_size(total_size);
+        int total_pakets = pkt_files.size() + 1;
+        pkt_cmd.set_total_packets(total_pakets);
 
         for (Packet &pkt : pkt_files)
         {
-            pkt.set_total_size(total_size);
+            pkt.set_total_packets(total_pakets);
         }
 
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
