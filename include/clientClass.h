@@ -22,9 +22,10 @@ public:
     void handle_connection();
     void send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue);
     int16_t connect_to_server();
-    bool end_connection();
     void get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue);
-    void handle_sync(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue, string folder_name);
+
+    void handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, string folder_name);
+    
     void monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue);
     void handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue);
 };

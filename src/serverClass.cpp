@@ -117,7 +117,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
-        // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
+        //ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
         ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes == 0)
@@ -125,6 +125,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             std::cerr << "Conexão encerrada pelo cliente." << std::endl;
             close(client_sock);
             client_sock = -1;
+            //TODO: liberar semaforo;
         }
         else if (received_bytes > 0)
         {
@@ -208,19 +209,19 @@ void Server::handle_communication(int client_sock)
         auto client_folder = "sync_dir_" + getUsername(client_sock);
         // cria thread de comandos
         std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
-                                   { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
-        // //  criathread de sync
-        // std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
-        //                         { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
-        // // cria thread de monitoramento
-        // std::thread monitor_thread([&client_sock, client_folder, &send_queue]()
-        //                            { Server::monitor_sync_dir(client_sock, client_folder, send_queue); });
+                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
+        //  criathread de sync
+        std::thread sync_thread([&client_sock, client_folder, &sync_queue]()
+                                { Server::handle_sync(client_sock, client_folder, sync_queue); });
+        // cria thread de monitoramento
+        std::thread monitor_thread([&client_sock, client_folder, &send_queue]()
+                                    { Server::monitor_sync_dir(client_sock, client_folder, send_queue); });
         // ===================================================================
 
         io_thread.join();
         command_thread.join();
-        // sync_thread.join();
-        // monitor_thread.join();
+        sync_thread.join();
+        monitor_thread.join();
 
         return;
     }
@@ -263,7 +264,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 FileInfo::delete_file(file_path);
-                std::cout << "Arquivo deletado: " << file_name << std::endl;
+                std::cout << "Deletando:  " << file_name << std::endl;
             }
             else if (cmd == "list_server")
             {
@@ -285,38 +286,30 @@ void Server::create_sync_dir(int client_fd)
     FileInfo::create_dir(dir_path);
 }
 
-void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
     std::cout << "LIDANDO COM SYNC" << std::endl;
-    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
+    std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();  
 
     while (client_sock > 0)
     {
         auto packets = sync_queue.consume_blocking();
-        if (packets[0].get_type() == 1)
+        packets[0].clean_payload();
+        if (packets[0].get_type() == 2)
         {
             string cmd = packets[0].get_payload_as_string();
-            if (cmd == "upload")
+            if (cmd == "upload_sync")
             {
-                // le a lista de pacotes e monta o arquivo
                 string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
             }
-            else if (cmd == "download")
+            else if (cmd == "delete_sync")
             {
-                auto sync_packet = sync_queue.consume_blocking();
-                FileInfo file_info = FileInfo::receive_file_info(sync_packet);
+                FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
-                send_queue.produce(FileInfo::create_packet_vector("download_response", file_path));
-                std::cout << "Arquivo enviado: " << file_name << std::endl;
-            }
-            else if (cmd == "delete")
-            {
-                auto sync_packet = sync_queue.consume_blocking();
-                FileInfo file_info = FileInfo::receive_file_info(sync_packet);
-                string file_name = file_info.get_file_name();
-                FileInfo::delete_file(file_name);
+                std::cout << "file_path do arquivo a ser deletado: " << file_path << std::endl;
+                FileInfo::delete_file(file_path);
                 std::cout << "Arquivo deletado: " << file_name << std::endl;
             }
         }
@@ -422,13 +415,13 @@ void Server::monitor_sync_dir(int &client_sock, string folder_name, Threads::Ato
                     string file_name = event->name;
                     cout << "Arquivo pronto para envio: " << file_name << endl;
                     string file_path = sync_dir + "/" + file_name;
-                    send_queue.produce(FileInfo::create_packet_vector("upload", file_path));
+                    send_queue.produce(FileInfo::create_packet_vector("upload_sync", file_path));
                 }
                 if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM)
                 {
                     string file_name = event->name;
                     cout << "Arquivo deletado: " << file_name << endl;
-                    send_queue.produce(FileInfo::create_packet_vector("delete", file_name));
+                    send_queue.produce(FileInfo::create_packet_vector("delete_sync", file_name));
                 }
             }
             i += sizeof(struct inotify_event) + event->len;
