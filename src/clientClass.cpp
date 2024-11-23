@@ -50,23 +50,23 @@ void Client::handle_connection()
         std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
                               { this->handle_io(send_queue, received_queue, sync_queue); });
 
-        // pega os arquivos do servidor e do cliente e sincroniza
-        // ===================================================================
+        // cria as threds
+        //  ===================================================================
         // cria thread de comandos
         std::thread command_thread([this, &send_queue, &received_queue]()
                                    { this->send_commands(send_queue, received_queue); });
+        // pega os arquivos do servidor e do cliente e sincroniza
+        // ===================================================================
+        cout << "Sincronizando diretórios..." << endl;
+        get_sync_dir(send_queue, received_queue);
+        cout << "Sincronização inicial concluída." << endl;
+        //  ===================================================================
         //  criathread de sync
         std::thread sync_thread([this, &sync_queue]()
                                 { this->handle_sync(sync_queue, "sync_dir", synced_files); });
         // cria thread de monitoramento
         std::thread monitor_thread([this, &send_queue]()
                                    { this->monitor_sync_dir("sync_dir", send_queue, synced_files); });
-        // cout << "Sincronizando diretórios..." << endl;
-        // get_sync_dir(send_queue, received_queue);
-        // //  ===================================================================
-        // cout << "Sincronização inicial concluída. (pos get_sync_dir)" << endl;
-        // cria as threds
-        //  ===================================================================
         // ===================================================================
 
         io_thread.join();
@@ -74,7 +74,6 @@ void Client::handle_connection()
         command_thread.join();
         monitor_thread.join();
         close(this->sock);
-
         return;
     }
     else
@@ -135,6 +134,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         if (maybe_packet.has_value())
         {
             auto packet = maybe_packet.value();
+            cout << "Enviando comando: " << packet[0].get_payload_as_string() << "do tipo: " << packet[0].get_type() << endl;
             for (auto pkt : packet)
             {
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
@@ -143,7 +143,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 {
                     std::cerr << "Erro ao enviar pacote." << std::endl;
                 }
-                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
+                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " do tipo: " << pkt.get_type() << " de tamanho: " << sent_bytes << std::endl;
             }
         }
 
@@ -155,6 +155,11 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
+            if (received_packet.get_seqn() == 1)
+            {
+                received_packet.clean_payload();
+                cout << "Recebendo comando: " << received_packet.get_payload_as_string() << " do tipo: " << received_packet.get_type() << endl;
+            }
             cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tipo " << received_packet.get_type() << " de tamanho: " << received_bytes << endl;
 
             if (received_packet.get_type() == 1)
@@ -295,7 +300,7 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, 
 
         if (packets[0].get_type() == 2)
         {
-            if (cmd == "upload_sync")
+            if (cmd.find("upload") != string::npos)
             {
                 std::lock_guard<std::mutex> lock(recive_file_mutex);
                 string file_name = FileInfo::receive_file(packets, folder_name);
@@ -303,7 +308,7 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, 
                 cout << "Adicionando ao sync exclude: " << file_name << endl;
                 synced_files.insert(file_name);
             }
-            else if (cmd == "delete_sync")
+            else if (cmd.find("delete") != string::npos)
             {
                 if (packets.size() >= 2)
                 {

@@ -103,7 +103,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         if (maybe_packet.has_value())
         {
             auto packet = maybe_packet.value();
-            // TODO: FAZER UM TIPO DE PACOTE NOVO PARA BROADCAST E FAZER UM FOR PARA ENVIAR PARA TODOS OS CLIENTES
             if (packet[0].get_type() == 4)
             {
                 for (auto client : clients)
@@ -123,8 +122,9 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         }
                     }
                 }
+                continue;
             }
-            if (packet[0].get_type() == 5)
+            else if (packet[0].get_type() == 5)
             {
                 for (auto pkt : packet)
                 {
@@ -135,8 +135,9 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     {
                         std::cerr << "Erro ao enviar pacote." << std::endl;
                     }
-                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
+                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response"<< std::endl;
                 }
+                continue;
             }
             else
             {
