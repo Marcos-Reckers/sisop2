@@ -104,16 +104,58 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         {
             auto packet = maybe_packet.value();
             // TODO: FAZER UM TIPO DE PACOTE NOVO PARA BROADCAST E FAZER UM FOR PARA ENVIAR PARA TODOS OS CLIENTES
-            for (auto pkt : packet)
+            if (packet[0].get_type() == 4)
             {
-                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-                if (sent_bytes < 0)
+                for (auto client : clients)
                 {
-                    std::cerr << "Erro ao enviar pacote." << std::endl;
+                    if (getUsername(client_sock) == client.second && client.first != client_sock)
+                    {
+                        for (auto pkt : packet)
+                        {
+                            pkt.set_type(2);
+                            std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                            ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
+                            if (sent_bytes < 0)
+                            {
+                                std::cerr << "Erro ao enviar pacote." << std::endl;
+                            }
+                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+                        }
+                    }
                 }
-                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
-                //}
+            }
+            if (packet[0].get_type() == 5)
+            {
+                for (auto pkt : packet)
+                {
+                    pkt.set_type(1);
+                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                    ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+                    if (sent_bytes < 0)
+                    {
+                        std::cerr << "Erro ao enviar pacote." << std::endl;
+                    }
+                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
+                }
+            }
+            else
+            {
+                for (auto client : clients)
+                {
+                    if (getUsername(client_sock) == client.second)
+                    {
+                        for (auto pkt : packet)
+                        {
+                            std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                            ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
+                            if (sent_bytes < 0)
+                            {
+                                std::cerr << "Erro ao enviar pacote." << std::endl;
+                            }
+                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
+                        }
+                    }
+                }
             }
         }
 
@@ -127,8 +169,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             std::cerr << "Conexão encerrada pelo cliente." << std::endl;
             close(client_sock);
             client_sock = -1;
-            // TODO: liberar semaforo; TALVEZ FEITO????
-            sem_post(active[getUsername(client_sock)].get());
+            // TODO: liberar semaforo;
         }
         else if (received_bytes > 0)
         {
@@ -217,7 +258,7 @@ void Server::handle_communication(int client_sock)
         auto client_folder = "sync_dir_" + getUsername(client_sock);
         // cria thread de comandos
         std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
-                                { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
+                                   { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
         //  criathread de sync
         std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
                                 { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
@@ -316,9 +357,8 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
-                cout << "Arquivo pronto para envio via sync: " << file_path << endl;
-                cout << "Não está fazendo broadcast pq precisamos ver como fazer para mandar para todos os clientes menso o q enviou" << endl;
-                // send_queue.produce(FileInfo::create_packet_vector("upload_sync", file_path));
+                cout << "Arquivo pronto para envio via broadcast: " << file_path << endl;
+                send_queue.produce(FileInfo::create_packet_vector("upload_broadcast", file_path));
             }
             else if (cmd == "delete_sync")
             {
@@ -326,9 +366,8 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 cout << "Delete recebido para o arquvio: " << file_name << endl;
-                cout << "Não está dando broadcast pq precisamos ver como fazer para deletar em todos os clientes menos o q deletou" << endl;
-                // cout << "Enviando delete_sync: " << file_name << endl;
-                // send_queue.produce(FileInfo::create_packet_vector("delete_sync", file_name));
+                cout << "Enviando delete_broadcast: " << file_name << endl;
+                send_queue.produce(FileInfo::create_packet_vector("delete_broadcast", file_name));
                 FileInfo::delete_file(file_path);
                 std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
             }

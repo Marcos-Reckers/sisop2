@@ -261,7 +261,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     Packet pkt_cmd = Packet::create_packet_cmd(command);
     int command_type = pkt_cmd.get_type();
 
-    if (command == "upload" || command == "download_response" || command == "upload_sync")
+if (command == "upload" || command == "download_response" || command == "upload_sync" || command == "upload_broadcast")
     {
         FileInfo file_info;
         file_info.retrieve_info_from_file(file_path_or_file_name);
@@ -277,7 +277,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
 
         return pkt_files;
     }
-    else if (command == "delete" || command == "delete_sync")
+    else if (command == "delete" || command == "delete_sync" || command == "delete_broadcast")
     {
         FileInfo file_info;
         file_info.set_file_name(file_path_or_file_name);

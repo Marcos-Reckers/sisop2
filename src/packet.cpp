@@ -65,6 +65,7 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
 
 Packet Packet::create_packet_cmd(const std::string &command)
 {
+    //TODO: MELHORAR ISSO
     std::vector<char> payload = std::vector<char>(command.begin(), command.end());
     // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
     int complete_payload = packet_header_size() + MAX_PAYLOAD_SIZE - (packet_header_size() + payload.size());
@@ -79,6 +80,14 @@ Packet Packet::create_packet_cmd(const std::string &command)
     else if (command.find("sync") != std::string::npos)
     {
         return Packet(2, 1, 1, payload.size(), payload);
+    }
+    else if (command.find("broadcast") != std::string::npos)
+    {
+        return Packet(4, 1, 1, payload.size(), payload);
+    }
+    else if ((command.find("list_server_response") != std::string::npos) || (command.find("download_response") != std::string::npos))
+    {
+        return Packet(5, 1, 1, payload.size(), payload);
     }
     else
     {

@@ -282,8 +282,6 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, 
     while (this->sock > 0)
     {
         auto packets = sync_queue.consume_blocking();
-        cout << "Pacotes consumidos na fila de sync: " << packets.size() << endl;
-
         // Verifica se há pacotes
         if (packets.empty())
         {
