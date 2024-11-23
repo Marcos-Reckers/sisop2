@@ -80,6 +80,7 @@ string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
 FileInfo FileInfo::receive_file_info(vector<Packet> &received_packet)
 {
     received_packet[1].clean_payload();
+    received_packet[1].print();
     FileInfo file_info = Packet::string_to_info(received_packet[1].get_payload());
     return file_info;
 }
@@ -134,20 +135,22 @@ void FileInfo::print_list_files(vector<FileInfo> files)
 
 void FileInfo::delete_file(string file_path)
 {
-    if (!std::filesystem::exists(file_path))
+    if (std::filesystem::exists(file_path))
     {
-        std::cerr << "Erro ao deletar o arquivo, NOT FOUND." << std::endl;
+        try
+        {
+            std::filesystem::remove(file_path);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << '\n';
+            return;
+        }
     }
-    try
+    else
     {
-        std::filesystem::remove(file_path);
+        std::cerr << "Arquivo não encontrado para deleção: " << file_path << std::endl;
     }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-        return;
-    }
-    std::cout << "Arquivo deletado com sucesso." << std::endl;
 }
 
 void FileInfo::send_cmd(std::string cmd, int sock)

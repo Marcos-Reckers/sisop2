@@ -1,8 +1,11 @@
 #include "clientClass.h"
 
-Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port), synced_files(), sock() {}
+Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port), sock(), synced_files() {}
 
 void Client::set_sock(int sock) { this->sock = sock; }
+
+std::mutex recive_file_mutex;
+std::mutex recive_delete_mutex;
 
 void Client::handle_connection()
 {
@@ -54,10 +57,10 @@ void Client::handle_connection()
                                    { this->send_commands(send_queue, received_queue); });
         //  criathread de sync
         std::thread sync_thread([this, &sync_queue]()
-                                { this->handle_sync(sync_queue, "sync_dir"); });
+                                { this->handle_sync(sync_queue, "sync_dir", synced_files); });
         // cria thread de monitoramento
         std::thread monitor_thread([this, &send_queue]()
-                                   { this->monitor_sync_dir("sync_dir", send_queue); });
+                                   { this->monitor_sync_dir("sync_dir", send_queue, synced_files); });
         // cout << "Sincronizando diretórios..." << endl;
         // get_sync_dir(send_queue, received_queue);
         // //  ===================================================================
@@ -146,7 +149,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
-        //ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
+        // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
         ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes > 0)
@@ -156,7 +159,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 
             if (received_packet.get_type() == 1)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
@@ -169,7 +172,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             }
             else if (received_packet.get_type() == 2)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
                     sync_queue.produce(packets_to_sync_queue);
@@ -189,7 +192,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             else
             {
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
-                received_packet.print();
             }
         }
     }
@@ -272,48 +274,66 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 //     }
 // }
 
-void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, string folder_name)
+void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, string folder_name, set<string> &synced_files)
 {
     std::cout << "LIDANDO COM SYNC CLIENTE" << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
-
     while (this->sock > 0)
     {
-        cout << "Consumindo pacotes da fila de sync" << endl;
-        cout << "folder_name: " << folder_name << endl;
         auto packets = sync_queue.consume_blocking();
-        cout << "Pacotes consumidos" << endl;
-        packets[0].clean_payload();
+        cout << "Pacotes consumidos na fila de sync: " << packets.size() << endl;
 
-        for (auto packet : packets)
+        // Verifica se há pacotes
+        if (packets.empty())
         {
-            packet.print();
+            continue;
         }
 
+        // Limpa e obtém o comando do primeiro pacote
+        packets[0].clean_payload();
+        string cmd = packets[0].get_payload_as_string();
+        cout << "Comando recebido: " << cmd << endl;
 
         if (packets[0].get_type() == 2)
         {
-            string cmd = packets[0].get_payload_as_string();
             if (cmd == "upload_sync")
             {
-                cout << "Entrei no upload sync" << endl;
+                std::lock_guard<std::mutex> lock(recive_file_mutex);
                 string file_name = FileInfo::receive_file(packets, folder_name);
-                std::cout << "Arquivo recebido: " << file_name << std::endl;
+                std::cout << "Arquivo recebido via upload sync: " << file_name << std::endl;
+                cout << "Adicionando ao sync exclude: " << file_name << endl;
                 synced_files.insert(file_name);
             }
             else if (cmd == "delete_sync")
             {
-                FileInfo file_info = FileInfo::receive_file_info(packets);
-                file_info.print();
+                if (packets.size() >= 2)
+                {
+                    packets[1].clean_payload();
+                    FileInfo file_info = Packet::string_to_info(packets[1].get_payload());
+                    string file_name = file_info.get_file_name();
 
-                string file_name = file_info.get_file_name();
-                string file_path = exec_path + "/" + folder_name + "/" + file_name;
-                cout << "caminho do arquivo: " << file_path << endl;
-                cout << "nome do arquivo: " << file_name << endl;
-                cout << "caminho do exec_path: " << exec_path << endl;
-                FileInfo::delete_file(file_path);
-                std::cout << "Arquivo deletado: " << file_name << std::endl;
+                    if (!file_name.empty())
+                    {
+                        std::lock_guard<std::mutex> lock(recive_delete_mutex);
+                        string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                        cout << "Deletando arquivo: " << file_path << endl;
+                        if (std::filesystem::exists(file_path))
+                        {
+                            FileInfo::delete_file(file_path);
+                            std::cout << "Arquivo deletado: " << file_name << std::endl;
+                            synced_files.insert(file_name);
+                        }
+                        else
+                        {
+                            std::cout << "Arquivo não encontrado: " << file_name << std::endl;
+                        }
+                    }
+                }
+                else
+                {
+                    cout << "Pacotes insuficientes para deletar o arquivo." << endl;
+                }
             }
         }
     }
@@ -335,11 +355,10 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             {
                 if (std::filesystem::exists(file_path))
                 {
-                    cout << "preparando arquivo: " << file_path << endl;
-                    const auto send_info = FileInfo::create_packet_vector("upload", file_path);
-                    cout << "pacote preparado para a fila" << endl;
-                    send_queue.produce(send_info);
-                    cout << "Arquivo colocado na fila com sucesso." << endl;
+                    string file_name = std::filesystem::path(file_path).filename();
+                    const auto send_file = FileInfo::create_packet_vector("upload", file_path);
+                    send_queue.produce(send_file);
+                    cout << "Enviando comando de Upload com o arquivo: " << file_name << endl;
                 }
                 else
                 {
@@ -384,6 +403,10 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         {
             send_queue.produce(FileInfo::create_packet_vector("list_server"));
             auto packets = received_queue.consume_blocking();
+            if (packets.size() < 2)
+            {
+                std::cout << "Pasta do servidor vazia" << std::endl;
+            }
             vector<FileInfo> file_infos = FileInfo::receive_list_server(packets);
             FileInfo::print_list_files(file_infos);
         }
@@ -408,7 +431,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
     return;
 }
 
-void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue)
+void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, set<string> &synced_files)
 {
 
     FileInfo::create_dir(folder_name);
@@ -451,24 +474,36 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
             {
                 if (event->mask & IN_CLOSE_WRITE || event->mask & IN_MOVED_TO)
                 {
-                    if (synced_files.find(event->name) != synced_files.end())
-                    {
-                        synced_files.erase(event->name);
-                        break;
-                    }
-                    else if (synced_files.find(event->name) == synced_files.end())
+                    std::lock_guard<std::mutex> lock(recive_file_mutex); // Adquire o lock
+                    if (synced_files.find(event->name) == synced_files.end())
                     {
                         string file_name = event->name;
-                        cout << "Arquivo pronto para envio: " << file_name << endl;
+                        cout << "Arquivo precisa ser syncronizado: " << file_name << endl;
                         string file_path = sync_dir + "/" + file_name;
+                        cout << "Enviando arquivo para o servidor" << endl;
                         send_queue.produce(FileInfo::create_packet_vector("upload_sync", file_path));
+                    }
+                    else if (synced_files.find(event->name) != synced_files.end())
+                    {
+                        cout << "Arquivo já sincronizado: " << event->name << " removendo da lista para futuras alterações" << endl;
+                        synced_files.erase(event->name);
                     }
                 }
                 if (event->mask & IN_DELETE || event->mask & IN_MOVED_FROM)
                 {
-                    string file_name = event->name;
-                    cout << "Arquivo deletado: " << file_name << endl;
-                    send_queue.produce(FileInfo::create_packet_vector("delete_sync", file_name));
+                    std::lock_guard<std::mutex> lock(recive_delete_mutex);
+                    if (synced_files.find(event->name) == synced_files.end())
+                    {
+                        string file_name = event->name;
+                        cout << "Arquivo deletado: " << file_name << endl;
+                        cout << "Enviando delete " << file_name << " para o servidor" << endl;
+                        send_queue.produce(FileInfo::create_packet_vector("delete_sync", file_name));
+                    }
+                    else if (synced_files.find(event->name) != synced_files.end())
+                    {
+                        cout << "Arquivo já sincronizado: " << event->name << " removendo da lista para futuras alterações" << endl;
+                        synced_files.erase(event->name);
+                    }
                 }
             }
             i += sizeof(struct inotify_event) + event->len;
