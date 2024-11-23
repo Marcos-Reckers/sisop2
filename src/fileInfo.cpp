@@ -80,7 +80,7 @@ string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
 FileInfo FileInfo::receive_file_info(vector<Packet> &received_packet)
 {
     received_packet[1].clean_payload();
-    received_packet[1].print();
+    // received_packet[1].print();
     FileInfo file_info = Packet::string_to_info(received_packet[1].get_payload());
     return file_info;
 }
@@ -105,6 +105,7 @@ vector<FileInfo> FileInfo::receive_list_server(std::vector<Packet> packets)
 
 vector<FileInfo> FileInfo::list_files(string path)
 {
+
     vector<FileInfo> files = {};
     if (std::filesystem::is_empty(path))
     {
@@ -261,7 +262,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     Packet pkt_cmd = Packet::create_packet_cmd(command);
     int command_type = pkt_cmd.get_type();
 
-if (command == "upload" || command == "download_response" || command == "upload_sync" || command == "upload_broadcast")
+    if (command == "upload" || command == "download_response" || command == "upload_sync" || command == "upload_broadcast")
     {
         FileInfo file_info;
         file_info.retrieve_info_from_file(file_path_or_file_name);
@@ -305,7 +306,7 @@ if (command == "upload" || command == "download_response" || command == "upload_
         file_info.set_m_time("0");
         file_info.set_a_time("0");
         file_info.set_c_time("0");
-        file_info.print();
+        //file_info.print();
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
         pkt_cmd.set_total_packets(2);
@@ -317,24 +318,6 @@ if (command == "upload" || command == "download_response" || command == "upload_
 
         return pkts;
     }
-    else if (command == "list_server")
-    {
-        vector<Packet> solo_pkt;
-        solo_pkt.push_back(pkt_cmd);
-        return solo_pkt;
-    }
-    else if (command == "list_client")
-    {
-        vector<Packet> solo_pkt;
-        solo_pkt.push_back(pkt_cmd);
-        return solo_pkt;
-    }
-    else if (command == "exit")
-    {
-        vector<Packet> solo_pkt;
-        solo_pkt.push_back(pkt_cmd);
-        return solo_pkt;
-    }
     else if (command == "list_server_response")
     {
         vector<Packet> pkt_files;
@@ -345,7 +328,6 @@ if (command == "upload" || command == "download_response" || command == "upload_
         int counter = 2;
         for (FileInfo file : files)
         {
-            file.print();
             Packet pkt_file_info = Packet::create_packet_info(file, command_type);
             pkt_file_info.set_seqn(counter);
             pkt_files.push_back(pkt_file_info);
@@ -362,6 +344,12 @@ if (command == "upload" || command == "download_response" || command == "upload_
 
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
         return pkt_files;
+    }
+    else if (command == "list_server" || "list_client" || "exit" || "get_sync_dir")
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
     }
     else if (command == "exit_response")
     {
