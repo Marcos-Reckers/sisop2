@@ -13,7 +13,7 @@ private:
     std::map<int, std::string> clients;      // Map para armazenar os clientes conectados
     std::map<std::string, std::unique_ptr<sem_t>> active;
 
-    public :
+public:
     // Construtor que inicializa o servidor com uma porta específica
     explicit Server(int port);
 

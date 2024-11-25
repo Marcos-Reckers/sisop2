@@ -7,6 +7,7 @@ void Client::set_sock(int sock) { this->sock = sock; }
 std::mutex recive_file_mutex;
 std::mutex recive_delete_mutex;
 std::mutex initial_sync_mutex;
+
 std::mutex send_packets_mutex;
 std::mutex recive_packets_mutex;
 
@@ -132,6 +133,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 
     while (this->sock > 0)
     {
+        send_packets_mutex.lock();
         // consumir do send_queue e enviar para o servidor na sock
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
@@ -142,9 +144,10 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             cout << "Enviando comando: " << clean_payload << " do tipo: " << packet[0].get_type() << endl;
             for (auto pkt : packet)
             {
-                //semaforo
+                // para
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                sleep(1);
+                // vai
+                // sleep(1);
                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
                 if (sent_bytes < 0)
                 {
@@ -153,11 +156,14 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " do tipo: " << pkt.get_type() << " de tamanho: " << sent_bytes << std::endl;
             }
         }
+        send_packets_mutex.unlock();
+
+        recive_packets_mutex.lock();
 
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
-        sleep(1);
+        // sleep(1);
         ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes > 0)
@@ -207,6 +213,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
             }
         }
+        recive_packets_mutex.unlock();
     }
     return;
 }
