@@ -130,7 +130,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
                 continue;
             }
-            else if (packet[0].get_type() == 5)
+            else if (packet[0].get_type() == 5 || packet[0].get_type() == 3)
             {
                 for (auto pkt : packet)
                 {
