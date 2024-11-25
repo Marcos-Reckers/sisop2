@@ -102,7 +102,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
     while (client_sock > 0)
     {
-        send_packets_mutex.lock();
         // consumir do send_queue e enviar para o servidor na sock
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
@@ -185,10 +184,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     }
                 }
             }
-            send_packets_mutex.unlock();
         }
 
-        recive_packets_mutex.lock();
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
@@ -211,7 +208,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         }
         else if (received_bytes > 0)
         {
-            std::lock_guard<std::mutex> lock(recive_packets_mutex);
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tamanho: " << received_bytes << endl;
             if (received_packet.get_type() == 1)
@@ -246,7 +242,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 received_packet.print();
             }
         }
-        recive_packets_mutex.unlock();
     }
 }
 
