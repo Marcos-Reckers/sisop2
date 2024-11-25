@@ -117,8 +117,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         {
                             pkt.set_type(2);
                             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                            // sleep(1);
-                            std::lock_guard<std::mutex> lock(send_packets_mutex);
+                            sleep(1);
+                            //std::lock_guard<std::mutex> lock(send_packets_mutex);
                             ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
                             if (sent_bytes < 0)
                             {
@@ -136,8 +136,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 {
                     pkt.set_type(1);
                     std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    // sleep(1);
-                    std::lock_guard<std::mutex> lock(send_packets_mutex);
+                    sleep(1);
+                    //std::lock_guard<std::mutex> lock(send_packets_mutex);
                     ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
                     if (sent_bytes < 0)
                     {
@@ -156,8 +156,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         for (auto pkt : packet)
                         {
                             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                            // sleep(1);
-                            std::lock_guard<std::mutex> lock(send_packets_mutex);
+                            sleep(1);
+                            //std::lock_guard<std::mutex> lock(send_packets_mutex);
                             ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
                             if (sent_bytes < 0)
                             {
@@ -173,7 +173,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
-        // sleep(1);
+        sleep(1);
         ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes == 0)

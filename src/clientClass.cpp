@@ -142,8 +142,9 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             cout << "Enviando comando: " << clean_payload << " do tipo: " << packet[0].get_type() << endl;
             for (auto pkt : packet)
             {
+                //semaforo
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                std::lock_guard<std::mutex> lock(send_packets_mutex);
+                sleep(1);
                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
                 if (sent_bytes < 0)
                 {
@@ -156,12 +157,11 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
-        // sleep(1);
+        sleep(1);
         ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes > 0)
         {
-            std::lock_guard<std::mutex> lock(recive_packets_mutex);
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             if (received_packet.get_seqn() == 1)
             {
