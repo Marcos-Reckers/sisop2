@@ -77,7 +77,7 @@ public:
     
 
     static ssize_t sendAll(int sockfd, const void *buf, size_t len, int flags);
-    static ssize_t recvAll(int sockfd, std::vector<uint8_t> &packet_data);
+    static vector<uint8_t> recvAll(int sockfd, ssize_t total_bytes);
 };
 
 #endif // FILEINFO_H
