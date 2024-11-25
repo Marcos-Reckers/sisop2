@@ -195,9 +195,6 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data)
 
     packet_size = ntohl(packet_size); // Converter para endianidade de host, se necessário
 
-    // Redimensione o vetor para o tamanho do pacote
-    packet_data.resize(packet_size);
-
     // Leia o restante do pacote
     ssize_t total_received = 0;
     while (total_received < packet_size)
