@@ -1,6 +1,7 @@
 #include "fileInfo.h"
 using namespace std;
 
+
 FileInfo::FileInfo() : file_name(""), file_size(0), m_time(""), a_time(""), c_time("") {}
 FileInfo::FileInfo(string file_name, int file_size, string m_time, string a_time, string c_time) : file_name(file_name), file_size(file_size), m_time(m_time), a_time(a_time), c_time(c_time) {}
 
@@ -185,6 +186,7 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
 
 ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data)
 {
+
     // Leia o tamanho do pacote (supondo que seja um uint32_t no início)
     uint32_t packet_size;
     ssize_t received = recv(sockfd, &packet_size, sizeof(packet_size), 0);
@@ -303,7 +305,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         file_info.set_m_time("0");
         file_info.set_a_time("0");
         file_info.set_c_time("0");
-        //file_info.print();
+        // file_info.print();
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
         pkt_cmd.set_total_packets(2);

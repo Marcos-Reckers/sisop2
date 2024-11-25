@@ -99,6 +99,10 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 {
     vector<Packet> packets_to_recv_queue;
     vector<Packet> packets_to_sync_queue;
+    size_t total_bytes = (Packet::packet_header_size() + MAX_PAYLOAD_SIZE);
+    std::vector<uint8_t> packet_bytes;
+    size_t received_bytes = 0;
+    std::vector<uint8_t> excess_bytes;
 
     while (client_sock > 0)
     {
@@ -185,12 +189,20 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
             }
         }
+        std::vector<uint8_t> left_packet_bytes(total_bytes - received_bytes);
+        received_bytes = recv(client_sock, left_packet_bytes.data(), left_packet_bytes.size(), 0);
 
-        ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
-        std::vector<uint8_t> packet_bytes(total_bytes);
-        // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
-        // sleep(1);
-        ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+        if (received_bytes > 0)
+        {
+            packet_bytes.insert(packet_bytes.end(), left_packet_bytes.begin(), left_packet_bytes.end());
+        }
+
+        if (packet_bytes.size() > total_bytes)
+        {
+            std::cout << packet_bytes.size() << " VS " << total_bytes << std::endl;
+            excess_bytes.insert(excess_bytes.end(), packet_bytes.begin() + total_bytes, packet_bytes.end());
+            packet_bytes.resize(total_bytes);
+        }
 
         if (received_bytes == 0)
         {
@@ -203,11 +215,17 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
             std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
             removeClient(client_sock);
-            close(client_sock);
             client_sock = -1;
+            close(client_sock);
         }
-        else if (received_bytes > 0)
+        else if (received_bytes == total_bytes)
         {
+            // if (received_bytes < total_bytes)
+            // {
+            //     continue;
+            // }
+            // else
+            // {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tamanho: " << received_bytes << endl;
             if (received_packet.get_type() == 1)
@@ -242,6 +260,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 received_packet.print();
             }
         }
+        std::swap(packet_bytes, excess_bytes);
     }
 }
 
