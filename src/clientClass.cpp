@@ -136,7 +136,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
         {
-            std::lock_guard<std::mutex> lock(send_packets_mutex);
             auto packet = maybe_packet.value();
             string dirty_payload = packet[0].get_payload_as_string();
             string clean_payload = dirty_payload.substr(0, dirty_payload.find('|'));
@@ -144,6 +143,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             for (auto pkt : packet)
             {
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                std::lock_guard<std::mutex> lock(send_packets_mutex);
                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
                 if (sent_bytes < 0)
                 {
@@ -156,7 +156,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
-        sleep(3);
+        // sleep(1);
         ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes > 0)
@@ -220,7 +220,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
     send_queue.produce(FileInfo::create_packet_vector("list_server"));
     vector<Packet> packets = received_queue.consume_blocking();
     vector<FileInfo> server_files = FileInfo::receive_list_server(packets);
-    //FileInfo::print_list_files(server_files);
+    // FileInfo::print_list_files(server_files);
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     std::string path = exec_path + "/" + "sync_dir";

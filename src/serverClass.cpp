@@ -106,7 +106,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
         {
-            std::lock_guard<std::mutex> lock(send_packets_mutex);
             auto packet = maybe_packet.value();
             if (packet[0].get_type() == 4)
             {
@@ -118,6 +117,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         {
                             pkt.set_type(2);
                             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                            // sleep(1);
+                            std::lock_guard<std::mutex> lock(send_packets_mutex);
                             ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
                             if (sent_bytes < 0)
                             {
@@ -135,12 +136,14 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 {
                     pkt.set_type(1);
                     std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                    // sleep(1);
+                    std::lock_guard<std::mutex> lock(send_packets_mutex);
                     ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
                     if (sent_bytes < 0)
                     {
                         std::cerr << "Erro ao enviar pacote." << std::endl;
                     }
-                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response"<< std::endl;
+                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
                 }
                 continue;
             }
@@ -153,6 +156,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         for (auto pkt : packet)
                         {
                             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                            // sleep(1);
+                            std::lock_guard<std::mutex> lock(send_packets_mutex);
                             ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
                             if (sent_bytes < 0)
                             {
@@ -167,8 +172,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
-        //ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
-        sleep(3);
+        // ssize_t received_bytes = FileInfo::recvAll(client_sock, packet_bytes);
+        // sleep(1);
         ssize_t received_bytes = recv(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
 
         if (received_bytes == 0)
@@ -184,7 +189,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             removeClient(client_sock);
             close(client_sock);
             client_sock = -1;
-
         }
         else if (received_bytes > 0)
         {
@@ -283,7 +287,6 @@ void Server::handle_communication(int client_sock)
         command_thread.join();
         sync_thread.join();
 
-
         return;
     }
     else
@@ -310,8 +313,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             {
                 cout << "Enviando lista de arquivos do servidor" << endl;
             }
-            else
-            if (cmd == "upload")
+            else if (cmd == "upload")
             {
                 string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
@@ -359,7 +361,7 @@ void Server::create_sync_dir(int client_fd)
 
 void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
-    //std::cout << "LIDANDO COM SYNC" << std::endl;
+    // std::cout << "LIDANDO COM SYNC" << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
