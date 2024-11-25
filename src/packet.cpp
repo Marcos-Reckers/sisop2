@@ -190,11 +190,13 @@ std::vector<Packet> Packet::create_packets_from_file(const std::string &file_pat
 
 void Packet::print() const
 {
+    string dirty_payload = get_payload_as_string();
+    string clean_payload = dirty_payload.substr(0, dirty_payload.find('|'));
     std::cout << "Type: " << type << "\n";
     std::cout << "SeqNum: " << seqn << "\n";
     std::cout << "Total size: " << total_pakets << "\n";
     std::cout << "Length: " << payload_size << "\n";
-    std::cout << "Payload: " << std::string(payload.begin(), payload.end()) << "\n";
+    std::cout << "Payload: " << clean_payload << "\n";
 }
 
 ssize_t Packet::packet_header_size() { return sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint16_t); }

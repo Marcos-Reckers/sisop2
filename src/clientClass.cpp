@@ -7,6 +7,8 @@ void Client::set_sock(int sock) { this->sock = sock; }
 std::mutex recive_file_mutex;
 std::mutex recive_delete_mutex;
 std::mutex initial_sync_mutex;
+std::mutex send_packets_mutex;
+std::mutex recive_packets_mutex;
 
 void Client::handle_connection()
 {
@@ -134,6 +136,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
         {
+            std::lock_guard<std::mutex> lock(send_packets_mutex);
             auto packet = maybe_packet.value();
             string dirty_payload = packet[0].get_payload_as_string();
             string clean_payload = dirty_payload.substr(0, dirty_payload.find('|'));
@@ -157,6 +160,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 
         if (received_bytes > 0)
         {
+            std::lock_guard<std::mutex> lock(recive_packets_mutex);
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             if (received_packet.get_seqn() == 1)
             {

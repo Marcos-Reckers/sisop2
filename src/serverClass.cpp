@@ -1,4 +1,8 @@
 #include "serverClass.h"
+#include <mutex>
+
+std::mutex send_packets_mutex;
+std::mutex recive_packets_mutex;
 
 // Construtor da classe que recebe a porta como argumento
 Server::Server(int port) : server_fd(-1), port(port)
@@ -102,6 +106,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         auto maybe_packet = send_queue.consume();
         if (maybe_packet.has_value())
         {
+            std::lock_guard<std::mutex> lock(send_packets_mutex);
             auto packet = maybe_packet.value();
             if (packet[0].get_type() == 4)
             {
@@ -182,6 +187,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         }
         else if (received_bytes > 0)
         {
+            std::lock_guard<std::mutex> lock(recive_packets_mutex);
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tamanho: " << received_bytes << endl;
             if (received_packet.get_type() == 1)
