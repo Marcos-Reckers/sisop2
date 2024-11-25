@@ -73,11 +73,11 @@ void Client::handle_connection()
         // ===================================================================
 
         io_thread.join();
+        close(this->sock);
+        return;
         sync_thread.join();
         command_thread.join();
         monitor_thread.join();
-        close(this->sock);
-        return;
     }
     else
     {
