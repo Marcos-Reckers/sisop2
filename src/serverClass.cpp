@@ -130,7 +130,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
                 continue;
             }
-            else if (packet[0].get_type() == 5 || packet[0].get_type() == 3)
+            else if (packet[0].get_type() == 5)
             {
                 for (auto pkt : packet)
                 {
@@ -147,6 +147,22 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
                 continue;
             }
+            else if (packet[0].get_type() == 3)
+            {
+                for (auto pkt : packet)
+                {
+                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                    sleep(1);
+                    //std::lock_guard<std::mutex> lock(send_packets_mutex);
+                    ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+                    if (sent_bytes < 0)
+                    {
+                        std::cerr << "Erro ao enviar pacote." << std::endl;
+                    }
+                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
+                }
+                continue;
+            } 
             else
             {
                 for (auto client : clients)
