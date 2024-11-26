@@ -12,7 +12,7 @@ Packet::Packet(uint16_t type, uint16_t seqn, uint32_t total_pakets, uint16_t pay
 std::vector<uint8_t> Packet::packet_to_bytes(const Packet &pkt)
 {
     size_t totalSize = sizeof(pkt.type) + sizeof(pkt.seqn) + sizeof(pkt.total_pakets) +
-                       sizeof(pkt.payload_size) + pkt.payload_size;
+                       sizeof(pkt.payload_size) + pkt.payload.size();
 
     std::vector<uint8_t> bytes(totalSize);
     size_t index = 0;
@@ -29,9 +29,9 @@ std::vector<uint8_t> Packet::packet_to_bytes(const Packet &pkt)
     std::memcpy(&bytes[index], &pkt.payload_size, sizeof(pkt.payload_size));
     index += sizeof(pkt.payload_size);
 
-    if (!pkt.payload.empty() && pkt.payload_size > 0)
+    if (!pkt.payload.empty() && pkt.payload.size() > 0)
     {
-        std::memcpy(&bytes[index], pkt.payload.data(), pkt.payload_size);
+        std::memcpy(&bytes[index], pkt.payload.data(), pkt.payload.size());
     }
 
     return bytes;
@@ -67,6 +67,7 @@ Packet Packet::create_packet_cmd(const std::string &command)
 {
     std::vector<char> payload = std::vector<char>(command.begin(), command.end());
     // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
+    int original_payload_size = payload.size();
     int complete_payload = packet_header_size() + MAX_PAYLOAD_SIZE - (packet_header_size() + payload.size());
     for (int i = 0; i < complete_payload; i++)
     {
@@ -74,23 +75,23 @@ Packet Packet::create_packet_cmd(const std::string &command)
     }
     if (command.find("exit_response") != std::string::npos)
     {
-        return Packet(3, 1, 1, payload.size(), payload);
+        return Packet(3, 1, 1, original_payload_size, payload);
     }
     else if (command.find("sync") != std::string::npos)
     {
-        return Packet(2, 1, 1, payload.size(), payload);
+        return Packet(2, 1, 1, original_payload_size, payload);
     }
     else if (command.find("broadcast") != std::string::npos)
     {
-        return Packet(4, 1, 1, payload.size(), payload);
+        return Packet(4, 1, 1, original_payload_size, payload);
     }
     else if ((command.find("list_server_response") != std::string::npos) || (command.find("download_response") != std::string::npos))
     {
-        return Packet(5, 1, 1, payload.size(), payload);
+        return Packet(5, 1, 1, original_payload_size, payload);
     }
     else
     {
-        return Packet(1, 1, 1, payload.size(), payload);
+        return Packet(1, 1, 1, original_payload_size, payload);
     }
 }
 
@@ -102,9 +103,15 @@ std::vector<Packet> Packet::create_packet_data(const std::vector<char> &data, in
     for (int i = 0; i < num_packets; ++i)
     {
         int payload_size = std::min(MAX_PAYLOAD_SIZE, static_cast<int>(data.size() - i * MAX_PAYLOAD_SIZE));
-        packets.emplace_back(type, i + 3, num_packets + 2, payload_size,
-                             std::vector<char>(data.begin() + i * MAX_PAYLOAD_SIZE,
-                                               data.begin() + i * MAX_PAYLOAD_SIZE + payload_size));
+        std::vector<char> payload(data.begin() + i * MAX_PAYLOAD_SIZE, data.begin() + i * MAX_PAYLOAD_SIZE + payload_size);
+        Packet pkt = Packet(type, i + 3, num_packets + 2, payload_size, payload);
+        int complete_payload = 4106 - (packet_header_size() + payload.size());
+        for (int i = 0; i < complete_payload; i++)
+        {
+            payload.push_back('|');
+        }
+        pkt.set_payload(payload);
+        packets.push_back(pkt);
     }
 
     return packets;
@@ -125,7 +132,6 @@ Packet Packet::create_packet_info(FileInfo &file_info, int type)
     {
         payload.push_back('|');
     }
-    pkt.set_payload_size(payload.size());
     pkt.set_payload(payload);
 
     return pkt;

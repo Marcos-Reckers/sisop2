@@ -79,6 +79,7 @@
     "set": "cpp",
     "cinttypes": "cpp",
     "__hash_table": "cpp",
-    "__tree": "cpp"
+    "__tree": "cpp",
+    "__split_buffer": "cpp"
   }
 }
