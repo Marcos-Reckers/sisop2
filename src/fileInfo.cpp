@@ -222,9 +222,9 @@ inline static ssize_t receive(int sockfd, std::vector<uint8_t> &packet_data, siz
         if (received <= 0)
         {
             int err = errno;
-            if (err != EAGAIN || err != EWOULDBLOCK)
+            if (err != EAGAIN || err != EWOULDBLOCK || err != 0)
             {
-                cout << "Erro: " << strerror(err) << endl;
+                // cout << "Erro: " << err << endl;
                 // continue;
             }
             return received; // Erro ou conexão fechada
@@ -275,7 +275,7 @@ ssize_t FileInfo::wait_and_receive(int sockfd, std::vector<uint8_t> &packet_data
     auto select_result = ::select(sockfd + 1, &read_fds, nullptr, nullptr, timeout != std::chrono::milliseconds::zero() ? &tv : nullptr);
     if (select_result == -1 || select_result == 0)
     {
-        return 0; // Erro ou timeout
+        return select_result; // Erro ou timeout
     }
     auto recved = receive(sockfd, packet_data, total_bytes);
     setNonBlocking(sockfd, true);
@@ -299,7 +299,7 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t 
         if (received <= 0 && total_received == 0)
         {
             int err = errno;
-            if (err != EAGAIN || err != EWOULDBLOCK)
+            if (err != EAGAIN || err != EWOULDBLOCK || err != 0)
             {
                 cout << "Erro: " << strerror(err) << endl;
                 // continue;
