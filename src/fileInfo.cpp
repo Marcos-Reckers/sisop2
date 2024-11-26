@@ -173,11 +173,19 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
 {
     size_t total = 0;
     const char *ptr = (const char *)buf;
+    
     while (total < len)
     {
         ssize_t sent = send(sockfd, ptr + total, len - total, flags);
         if (sent <= 0)
+        {
+            int err = errno;
+            if (err == EAGAIN || err == EWOULDBLOCK)
+            {
+                continue;
+            }
             return sent;
+        }
         total += sent;
     }
     return total;
@@ -198,6 +206,11 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t 
         ssize_t received = recv(sockfd, ptr, to_receive, 0);
         if (received <= 0)
         {
+            int err = errno;
+            if (err == EAGAIN || err == EWOULDBLOCK)
+            {
+                continue;
+            }
             return received; // Erro ou conexão fechada
         }
         total_received += received;
@@ -329,7 +342,7 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         file_info.set_m_time("0");
         file_info.set_a_time("0");
         file_info.set_c_time("0");
-        //file_info.print();
+        // file_info.print();
         Packet pkt_file_info = Packet::create_packet_info(file_info, command_type);
 
         pkt_cmd.set_total_packets(2);
