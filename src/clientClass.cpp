@@ -387,7 +387,8 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             std::string file_name = cmd.substr(7);
             if (!file_name.empty())
             {
-                send_queue.produce(FileInfo::create_packet_vector("delete", file_name));
+                auto pkts = FileInfo::create_packet_vector("delete", file_name);
+                send_queue.produce(pkts);
                 cout << "Arquivo deletado: " << file_name << endl;
             }
             else
@@ -401,7 +402,8 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             if (!file_name.empty())
             {
                 // envia o comando e o nome do arquivo para a fila de pacotes a serem enviados
-                send_queue.produce(FileInfo::create_packet_vector("download", file_name));
+                auto pkts = FileInfo::create_packet_vector("download", file_name);
+                send_queue.produce(pkts);
                 auto packets = received_queue.consume_blocking();
                 FileInfo::receive_file(packets, "downloads");
                 cout << "Arquivo recebido com sucesso." << endl;
@@ -413,7 +415,8 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         }
         else if (cmd.rfind("list_server", 0) == 0)
         {
-            send_queue.produce(FileInfo::create_packet_vector("list_server"));
+            auto pkts = FileInfo::create_packet_vector("list_server");
+            send_queue.produce(pkts);
             auto packets = received_queue.consume_blocking();
             if (packets.size() < 2)
             {
@@ -431,7 +434,8 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         }
         else if (cmd.rfind("exit", 0) == 0)
         {
-            send_queue.produce(FileInfo::create_packet_vector("exit"));
+            auto pkts = FileInfo::create_packet_vector("exit");
+            send_queue.produce(pkts);
             break;
         }
         else
@@ -493,7 +497,8 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
                         cout << "Arquivo precisa ser syncronizado: " << file_name << endl;
                         string file_path = sync_dir + "/" + file_name;
                         cout << "Enviando arquivo para o servidor" << endl;
-                        send_queue.produce(FileInfo::create_packet_vector("upload_sync", file_path));
+                        auto pkts = FileInfo::create_packet_vector("upload", file_path);
+                        send_queue.produce(pkts);
                     }
                     else if (synced_files.find(event->name) != synced_files.end())
                     {
@@ -509,7 +514,8 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
                         string file_name = event->name;
                         cout << "Arquivo deletado: " << file_name << endl;
                         cout << "Enviando delete " << file_name << " para o servidor" << endl;
-                        send_queue.produce(FileInfo::create_packet_vector("delete_sync", file_name));
+                        auto pkts = FileInfo::create_packet_vector("delete_sync", file_name);
+                        send_queue.produce(pkts);
                     }
                     else if (synced_files.find(event->name) != synced_files.end())
                     {

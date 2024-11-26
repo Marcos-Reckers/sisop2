@@ -324,14 +324,16 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 cout << "Arquivo pronto para envio via upload_sync: " << file_path << endl;
-                send_queue.produce(FileInfo::create_packet_vector("upload_sync", file_path));
+                auto pkts = FileInfo::create_packet_vector("upload_sync", file_path);
+                send_queue.produce(pkts);
             }
             else if (cmd == "download")
             {
                 FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
-                send_queue.produce(FileInfo::create_packet_vector("download_response", file_path));
+                auto pkts = FileInfo::create_packet_vector("download_response", file_path);
+                send_queue.produce(pkts);
                 std::cout << "Arquivo enviado: " << file_name << std::endl;
             }
             else if (cmd == "delete")
@@ -340,18 +342,22 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 cout << "Enviando delete_sync: " << file_name << endl;
-                send_queue.produce(FileInfo::create_packet_vector("delete_sync", file_name));
+                auto pkts = FileInfo::create_packet_vector("delete_sync", file_name);
+                send_queue.produce(pkts);
                 std::cout << "Deletando:  " << file_name << std::endl;
                 FileInfo::delete_file(file_path);
             }
             else if (cmd == "list_server")
             {
                 string folder_path = exec_path + "/" + folder_name;
-                send_queue.produce(FileInfo::create_packet_vector("list_server_response", folder_path));
+                auto pkts = FileInfo::create_packet_vector("list_server_response", folder_path);
+                send_queue.produce(pkts);
             }
             else if (cmd == "exit")
             {
-                send_queue.produce(FileInfo::create_packet_vector("exit_response", ""));
+                std::cout << "Encerrando conexão com o cliente." << std::endl;
+                auto pkts = FileInfo::create_packet_vector("exit_response", "");
+                send_queue.produce(pkts);
             }
         }
     }
@@ -382,7 +388,8 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 cout << "Arquivo pronto para envio via broadcast: " << file_path << endl;
-                send_queue.produce(FileInfo::create_packet_vector("upload_broadcast", file_path));
+                auto pkts = FileInfo::create_packet_vector("upload_broadcast", file_path);
+                send_queue.produce(pkts);
             }
             else if (cmd == "delete_sync")
             {
@@ -391,7 +398,8 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 cout << "Delete recebido para o arquvio: " << file_name << endl;
                 cout << "Enviando delete_broadcast: " << file_name << endl;
-                send_queue.produce(FileInfo::create_packet_vector("delete_broadcast", file_name));
+                auto pkts = FileInfo::create_packet_vector("delete_broadcast", file_name);
+                send_queue.produce(pkts);
                 FileInfo::delete_file(file_path);
                 std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
             }
