@@ -144,7 +144,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             {
                 //semaforo
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                sleep(1);
                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
                 if (sent_bytes < 0)
                 {
