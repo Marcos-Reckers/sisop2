@@ -54,11 +54,14 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
     std::memcpy(&pkt.payload_size, &bytes[index], sizeof(pkt.payload_size));
     index += sizeof(pkt.payload_size);
 
+    cout << "Payload size: " << pkt.payload_size << endl;
+
     if (pkt.payload_size > 0)
     {
         pkt.payload.resize(pkt.payload_size);
         std::memcpy(pkt.payload.data(), &bytes[index], pkt.payload_size);
     }
+
 
     return pkt;
 }
