@@ -130,6 +130,7 @@ Packet Packet::create_packet_info(FileInfo &file_info, int type)
     pkt.set_total_packets(2);
 
     std::vector<char> payload = info_to_string(file_info);
+    pkt.set_payload_size(payload.size());
     // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
     int complete_payload = 4106 - (packet_header_size() + payload.size());
     for (int i = 0; i < complete_payload; i++)

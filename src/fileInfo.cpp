@@ -158,9 +158,24 @@ void FileInfo::send_cmd(std::string cmd, int sock)
 {
     Packet cmd_packet = Packet::create_packet_cmd(cmd);
     std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(cmd_packet);
-    ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
+    size_t total = 0;
+    do
+    {
+        ssize_t sent_bytes = send(sock, packet_bytes.data(), packet_bytes.size(), 0);
+        if (sent_bytes <= 0)
+        {
+            int err = errno;
+            if (err == EAGAIN || err == EWOULDBLOCK)
+            {
+                continue;
+            }
+            return;
+        }
+        total += sent_bytes;
+    } while(total < packet_bytes.size());
 
-    if (sent_bytes < 0)
+
+    if (total < 0)
     {
         std::cerr << "Erro ao enviar comando como pacote." << std::endl;
         return;
