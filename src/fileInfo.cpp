@@ -206,7 +206,8 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t 
         ssize_t received = recv(sockfd, ptr, to_receive, 0);
         if (received <= 0)
         {
-            // int err = errno;
+            int err = errno;
+            cout << "Erro: " << strerror(err) << endl;
             // if (err == EAGAIN || err == EWOULDBLOCK)
             // {
             //     continue;
