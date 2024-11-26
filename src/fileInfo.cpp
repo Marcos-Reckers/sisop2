@@ -172,8 +172,7 @@ void FileInfo::send_cmd(std::string cmd, int sock)
             return;
         }
         total += sent_bytes;
-    } while(total < packet_bytes.size());
-
+    } while (total < packet_bytes.size());
 
     if (total < 0)
     {
@@ -188,7 +187,7 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
 {
     size_t total = 0;
     const char *ptr = (const char *)buf;
-    
+
     while (total < len)
     {
         ssize_t sent = send(sockfd, ptr + total, len - total, flags);
@@ -204,6 +203,84 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
         total += sent;
     }
     return total;
+}
+
+inline static ssize_t receive(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes)
+{
+    if (packet_data.size() < total_bytes)
+    {
+        packet_data.resize(total_bytes);
+    }
+
+    ssize_t total_received = 0;
+    do
+    {
+        uint8_t *ptr = packet_data.data();
+        ptr += total_received;
+        ssize_t to_receive = total_bytes - total_received;
+        ssize_t received = recv(sockfd, ptr, to_receive, 0);
+        if (received <= 0)
+        {
+            int err = errno;
+            if (err != EAGAIN || err != EWOULDBLOCK)
+            {
+                cout << "Erro: " << strerror(err) << endl;
+                // continue;
+            }
+            return received; // Erro ou conexão fechada
+        }
+        total_received += received;
+    } while (total_received < total_bytes);
+
+    return total_received;
+}
+
+static bool setNonBlocking(const int sockfd, const bool &non_blocking)
+{
+    auto flags = ::fcntl(sockfd, F_GETFL, 0);
+    if (flags == -1)
+    {
+        return false;
+    }
+    if (non_blocking)
+    {
+        flags |= O_NONBLOCK;
+    }
+    else
+    {
+        flags &= ~O_NONBLOCK;
+    }
+    auto fcntl_result = ::fcntl(sockfd, F_SETFL, flags);
+    if (fcntl_result == -1)
+    {
+        return false;
+    }
+    return true;
+}
+
+ssize_t FileInfo::wait_and_receive(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes, std::chrono::milliseconds timeout)
+{
+    if (!setNonBlocking(sockfd, false))
+    {
+        return -1;
+    }
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(sockfd, &read_fds);
+
+    timeval tv;
+    tv.tv_sec = timeout.count() / 1000;
+    tv.tv_usec = (timeout.count() % 1000) * 1000;
+
+    auto select_result = ::select(sockfd + 1, &read_fds, nullptr, nullptr, timeout != std::chrono::milliseconds::zero() ? &tv : nullptr);
+    if (select_result == -1 || select_result == 0)
+    {
+        return 0; // Erro ou timeout
+    }
+    auto recved = receive(sockfd, packet_data, total_bytes);
+    setNonBlocking(sockfd, true);
+
+    return recved;
 }
 
 ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes)

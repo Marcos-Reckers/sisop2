@@ -77,6 +77,7 @@ public:
     
 
     static ssize_t sendAll(int sockfd, const void *buf, size_t len, int flags);
+    static ssize_t wait_and_receive(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes, std::chrono::milliseconds timeout);
     static ssize_t recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t len);
 };
 
