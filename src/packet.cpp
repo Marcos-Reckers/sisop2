@@ -37,29 +37,30 @@ std::vector<uint8_t> Packet::packet_to_bytes(const Packet &pkt)
     return bytes;
 }
 
-Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
+Packet Packet::bytes_to_packet(std::vector<uint8_t> &bytes)
 {
     Packet pkt;
-    size_t index = 0;
+    uint8_t *ptr = bytes.data();
 
-    std::memcpy(&pkt.type, &bytes[index], sizeof(pkt.type));
-    index += sizeof(pkt.type);
+    std::memcpy(&pkt.type, ptr, sizeof(pkt.type));
+    ptr += sizeof(pkt.type);
 
-    std::memcpy(&pkt.seqn, &bytes[index], sizeof(pkt.seqn));
-    index += sizeof(pkt.seqn);
+    std::memcpy(&pkt.seqn, ptr, sizeof(pkt.seqn));
+    ptr += sizeof(pkt.seqn);
 
-    std::memcpy(&pkt.total_pakets, &bytes[index], sizeof(pkt.total_pakets));
-    index += sizeof(pkt.total_pakets);
+    std::memcpy(&pkt.total_pakets, ptr, sizeof(pkt.total_pakets));
+    ptr += sizeof(pkt.total_pakets);
 
-    std::memcpy(&pkt.payload_size, &bytes[index], sizeof(pkt.payload_size));
-    index += sizeof(pkt.payload_size);
+    std::memcpy(&pkt.payload_size, ptr, sizeof(pkt.payload_size));
+    ptr += sizeof(pkt.payload_size);
 
+    cout << "Bytes Size: " << bytes.size() << endl;
     cout << "Payload size: " << pkt.payload_size << endl;
 
     if (pkt.payload_size > 0)
     {
         pkt.payload.resize(pkt.payload_size);
-        std::memcpy(pkt.payload.data(), &bytes[index], pkt.payload_size);
+        std::memcpy(pkt.payload.data(), ptr, pkt.payload_size);
     }
 
 
@@ -69,8 +70,8 @@ Packet Packet::bytes_to_packet(const std::vector<uint8_t> &bytes)
 Packet Packet::create_packet_cmd(const std::string &command)
 {
     std::vector<char> payload = std::vector<char>(command.begin(), command.end());
-    // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
     int original_payload_size = payload.size();
+    // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
     int complete_payload = packet_header_size() + MAX_PAYLOAD_SIZE - (packet_header_size() + payload.size());
     for (int i = 0; i < complete_payload; i++)
     {

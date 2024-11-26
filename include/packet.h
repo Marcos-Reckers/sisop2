@@ -23,7 +23,7 @@ public:
     Packet(uint16_t type, uint16_t seqn, uint32_t total_pakets, uint16_t payload_size, const std::vector<char> &payload);
 
     static std::vector<uint8_t> packet_to_bytes(const Packet &pkt);
-    static Packet bytes_to_packet(const std::vector<uint8_t> &bytes);
+    static Packet bytes_to_packet(std::vector<uint8_t> &bytes);
 
     static Packet create_packet_cmd(const std::string &command);
     static std::vector<Packet> create_packet_data(const std::vector<char> &data, int type);
