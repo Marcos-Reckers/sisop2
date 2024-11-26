@@ -206,11 +206,11 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t 
         ssize_t received = recv(sockfd, ptr, to_receive, 0);
         if (received <= 0)
         {
-            int err = errno;
-            if (err == EAGAIN || err == EWOULDBLOCK)
-            {
-                continue;
-            }
+            // int err = errno;
+            // if (err == EAGAIN || err == EWOULDBLOCK)
+            // {
+            //     continue;
+            // }
             return received; // Erro ou conexão fechada
         }
         total_received += received;

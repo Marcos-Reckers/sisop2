@@ -497,7 +497,7 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
                         cout << "Arquivo precisa ser syncronizado: " << file_name << endl;
                         string file_path = sync_dir + "/" + file_name;
                         cout << "Enviando arquivo para o servidor" << endl;
-                        auto pkts = FileInfo::create_packet_vector("upload", file_path);
+                        auto pkts = FileInfo::create_packet_vector("upload_sync", file_path);
                         send_queue.produce(pkts);
                     }
                     else if (synced_files.find(event->name) != synced_files.end())
