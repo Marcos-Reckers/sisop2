@@ -183,8 +183,6 @@ ssize_t FileInfo::sendAll(int sockfd, const void *buf, size_t len, int flags)
     return total;
 }
 
-ss
-
 ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes)
 {
     if (packet_data.size() < total_bytes)
