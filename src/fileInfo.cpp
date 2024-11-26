@@ -235,7 +235,7 @@ inline static ssize_t receive(int sockfd, std::vector<uint8_t> &packet_data, siz
     return total_received;
 }
 
-static bool setNonBlocking(const int sockfd, const bool &non_blocking)
+inline static bool setNonBlocking(const int sockfd, const bool &non_blocking)
 {
     auto flags = ::fcntl(sockfd, F_GETFL, 0);
     if (flags == -1)
