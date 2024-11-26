@@ -142,14 +142,14 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             cout << "Enviando comando: " << clean_payload << " do tipo: " << packet[0].get_type() << endl;
             for (auto pkt : packet)
             {
-                //semaforo
+                // semaforo
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
                 if (sent_bytes < 0)
                 {
                     std::cerr << "Erro ao enviar pacote." << std::endl;
                 }
-                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " do tipo: " << pkt.get_type() << " de tamanho: " << sent_bytes  << " esperado: " << pkt.get_payload_size() << std::endl;
+                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " do tipo: " << pkt.get_type() << " de tamanho: " << sent_bytes << " esperado: " << pkt.get_payload_size() << std::endl;
             }
         }
 
@@ -490,6 +490,14 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
             if (event->len)
             {
+                // Verifica se o primeiro caractere do nome do arquivo é alfanumérico
+                if (!isalnum(event->name[0]))
+                {
+                    // Se não for, pula para o próximo evento
+                    i += sizeof(struct inotify_event) + event->len;
+                    continue;
+                }
+
                 if (event->mask & IN_CLOSE_WRITE || event->mask & IN_MOVED_TO)
                 {
                     std::lock_guard<std::mutex> lock(recive_file_mutex); // Adquire o lock

@@ -174,11 +174,11 @@ void FileInfo::send_cmd(std::string cmd, int sock)
         total += sent_bytes;
     } while (total < packet_bytes.size());
 
-    if (total < 0)
-    {
-        std::cerr << "Erro ao enviar comando como pacote." << std::endl;
-        return;
-    }
+    // if (total < 0)
+    // {
+    //     std::cerr << "Erro ao enviar comando como pacote." << std::endl;
+    //     return;
+    // }
 
     std::cout << "Comando enviado como pacote: " << cmd << std::endl;
 }
