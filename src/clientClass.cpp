@@ -149,7 +149,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 {
                     std::cerr << "Erro ao enviar pacote." << std::endl;
                 }
-                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " do tipo: " << pkt.get_type() << " de tamanho: " << sent_bytes << std::endl;
+                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " do tipo: " << pkt.get_type() << " de tamanho: " << sent_bytes  << " esperado: " << pkt.get_payload_size() << std::endl;
             }
         }
 
