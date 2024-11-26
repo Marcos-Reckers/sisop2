@@ -157,9 +157,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
         // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
-        sleep(1);
-        ssize_t received_bytes = recv(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
-
+        ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes, total_bytes);
         if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
