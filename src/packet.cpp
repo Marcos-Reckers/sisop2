@@ -207,7 +207,7 @@ void Packet::print() const
     std::cout << "SeqNum: " << seqn << "\n";
     std::cout << "Total size: " << total_pakets << "\n";
     std::cout << "Length: " << payload_size << "\n";
-    std::cout << "Payload: " << clean_payload << "\n";
+    // std::cout << "Payload: " << clean_payload << "\n";
 }
 
 ssize_t Packet::packet_header_size() { return sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint16_t); }
