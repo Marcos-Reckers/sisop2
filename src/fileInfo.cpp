@@ -275,7 +275,7 @@ ssize_t FileInfo::wait_and_receive(int sockfd, std::vector<uint8_t> &packet_data
     auto select_result = ::select(sockfd + 1, &read_fds, nullptr, nullptr, timeout != std::chrono::milliseconds::zero() ? &tv : nullptr);
     if (select_result == -1 || select_result == 0)
     {
-        return select_result; // Erro ou timeout
+        return -1; // Erro ou timeout
     }
     auto recved = receive(sockfd, packet_data, total_bytes);
     setNonBlocking(sockfd, true);
