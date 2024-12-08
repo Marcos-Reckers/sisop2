@@ -316,35 +316,35 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t 
     return total_received;
 }
 
-// ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes)
-// {
-//     uint32_t packet_size = total_bytes;
-//     if (packet_data.size() < total_bytes)
-//     {
-//         packet_data.resize(total_bytes);
-//     }
-//     ssize_t received = recv(sockfd, &packet_size, total_bytes, 0);
-//     if (received <= 0)
-//     {
-//         return received; // Erro ou conexão fechada
-//     }
+ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t total_bytes)
+{
+    uint32_t packet_size = total_bytes;
+    if (packet_data.size() < total_bytes)
+    {
+        packet_data.resize(total_bytes);
+    }
+    ssize_t received = recv(sockfd, &packet_size, total_bytes, 0);
+    if (received <= 0)
+    {
+        return received; // Erro ou conexão fechada
+    }
 
-//     packet_size = ntohl(packet_size); // Converter para endianidade de host, se necessário
+    packet_size = ntohl(packet_size); // Converter para endianidade de host, se necessário
 
-//     // Leia o restante do pacote
-//     ssize_t total_received = 0;
-//     while (total_received < packet_size)
-//     {
-//         received = recv(sockfd, packet_data.data() + total_received, packet_size - total_received, 0);
-//         if (received <= 0)
-//         {
-//             return received; // Erro ou conexão fechada
-//         }
-//         total_received += received;
-//     }
+    // Leia o restante do pacote
+    ssize_t total_received = 0;
+    while (total_received < packet_size)
+    {
+        received = recv(sockfd, packet_data.data() + total_received, packet_size - total_received, 0);
+        if (received <= 0)
+        {
+            return received; // Erro ou conexão fechada
+        }
+        total_received += received;
+    }
 
-//     return total_received;
-// }
+    return total_received;
+}
 
 int FileInfo::most_recent_time(std::string time1, std::string time2)
 {
