@@ -6,15 +6,18 @@
 class Server
 {
 private:
-    int server_fd;                           // File descriptor do socket do servidor
-    sockaddr_in server_addr;                 // Estrutura de endereço do servidor
+    int server_fd;           // File descriptor do socket do servidor
+    sockaddr_in server_addr; // Estrutura de endereço do servidor
     std::string type;
+    struct hostent *main_server;
     int port;                                // Porta na qual o servidor escuta
     std::vector<std::thread> client_threads; // Vetor para armazenar threads de clientes
     std::map<int, std::string> clients;      // Map para armazenar os clientes conectados
     std::map<std::string, std::unique_ptr<sem_t>> active;
 
-    public :
+    vector<int> ports;
+
+public:
     // Construtor que inicializa o servidor com uma porta específica
     explicit Server(int port, string type);
 
@@ -43,6 +46,7 @@ private:
 
     // Método para encerrar a conexão com um cliente
     void close_connection(int client_sock);
+    int connect_server(string main_ip_address, string main_port);
 
     // Getters
     int getServerFd() const;

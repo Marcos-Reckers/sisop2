@@ -47,6 +47,7 @@ debug: compile
 
 compile: $(BUILD_DIR) $(SERVER_BUILD_DIR) $(CLIENT_BUILD_DIR) $(TEST_BUILD_DIR) $(SERVER_NAME) $(CLIENT_NAME)
 	cp $(CLIENT_NAME) $(TEST_BUILD_DIR)/myClient
+	cp $(SERVER_NAME) $(TEST_BUILD_DIR)/server
 
 # Compilar o servidor
 $(SERVER_NAME): $(SERVER_SRC)

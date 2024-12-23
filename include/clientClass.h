@@ -14,15 +14,17 @@ private:
     struct hostent *server;
     string server_port;
     int sock;
+    vector<int> ports;
     std::vector<std::thread> active_threads;
-
+    bool running;
+    sockaddr_in client_addr;  
 
 public:
     set<string> synced_files;
     Client(string username, struct hostent *server, string server_port);
     void set_sock(int sock);
 
-    int wait_connection();
+    void wait_connection();
 
     void handle_connection();
     void send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue);
@@ -33,6 +35,9 @@ public:
 
     void monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, set<string> &synced_files);
     void handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue);
+    
+    bool is_socket_open();
+    void heartbeat();
 };
 
 #endif // CLIENTCLASS_H

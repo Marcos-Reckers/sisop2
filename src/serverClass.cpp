@@ -95,6 +95,49 @@ void Server::acceptClients()
     }
 }
 
+int Server::connect_server(string main_ip_address, string main_port)
+{
+    std::cout << "Entrei connect_server" << std::endl;
+    struct sockaddr_in serv_addr;
+    // Cria o socket
+    int curr_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (curr_sock < 0)
+    {
+        cout << "Erro ao criar socket" << endl;
+        return -1;
+    }
+
+    main_server = gethostbyname(main_ip_address.c_str());
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(atoi(main_port.c_str()));
+    serv_addr.sin_addr = *((struct in_addr *)main_server->h_addr);
+    bzero(&(serv_addr.sin_zero), 8);
+
+    // Tenta conectar ao servidor por 100 segundos
+    int attempts = 0;
+    while (attempts < 10)
+    {
+        std::cout << "Dentro do while connect_server" << endl;
+        if (connect(curr_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
+        {
+            std::string username_with_null = "BACKUP";
+            send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
+            return curr_sock;
+        }
+        else
+        {
+            cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+            sleep(1); // Aguarda 1 segundo antes de tentar novamente
+            attempts++;
+        }
+    }
+
+    cout << "Falha na conexão TIMEOUT" << endl;
+    close(curr_sock);
+    return -3;
+}
+
 void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
     vector<Packet> packets_to_recv_queue;

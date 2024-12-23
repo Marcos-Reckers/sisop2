@@ -13,6 +13,7 @@ std::mutex recive_packets_mutex;
 void Client::handle_connection()
 {
     this->sock = this->connect_to_server();
+
     char buffer[256];
     recv(this->sock, buffer, 256, 0);
     if (strcmp(buffer, "exit") == 0)
@@ -49,6 +50,8 @@ void Client::handle_connection()
         Threads::AtomicQueue<std::vector<Packet>> received_queue;
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
+
+        active_threads.emplace_back(&Client::heartbeat, this);
 
         // std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
         //                       { this->handle_io(send_queue, received_queue, sync_queue); });
@@ -88,33 +91,134 @@ void Client::handle_connection()
 
         std::cout << "DEI JOIN EM TODAS AS THREADS!" << std::endl;
     }
-    
+
     else
     {
         cout << "Problema ao conectar com servidor!" << this->sock << endl;
     }
 
-
-
     return;
 }
 
-int Client::wait_connection()
+// int Client::wait_connection()
+// {
+//     std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
+
+//     int new_sock = 0;
+
+//     while (new_sock == 0)
+//     {
+//         sockaddr_in client_addr;
+//         socklen_t server_len = sizeof(client_addr);
+
+//         new_sock = accept(this->sock, (struct sockaddr *)&client_addr, &server_len);
+//         std::cout << "NEW SOCK: " << new_sock;
+        
+//     }
+
+//     std::cout << "Conexão estabelecida com um novo servidor BACKUP." << std::endl;
+
+//     this->running = true;
+//     return new_sock;
+// }
+
+/* void Client::wait_connection()
 {
     std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
 
     int new_sock = 0;
-
-    while (new_sock == 0)
+    new_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (new_sock == -1)
     {
-        sockaddr_in server_addr;
-        socklen_t server_len = sizeof(server_addr);
-
-        new_sock = accept(this->sock, (struct sockaddr *)&server_addr, &server_len);
+        std::cerr << "Erro ao criar o socket." << std::endl;
+        return;
     }
 
-    std::cout << "Conexão estabelecida com um novo servidor BACKUP." << std::endl;
-    return new_sock;
+    memset(&client_addr, 0, sizeof(client_addr));
+
+    // Configuração do endereço do servidor
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_addr.s_addr = INADDR_ANY; // Escuta em qualquer interface
+    client_addr.sin_port = htons(atoi(server_port.c_str()));
+
+    // Bind do socket à porta
+    if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+    {
+        std::cerr << "Erro ao fazer o bind na porta " << htons(atoi(server_port.c_str())) << "." << std::endl;
+        close(new_sock);
+        return;
+    }
+
+    // Coloca o servidor em modo de escuta
+    if (listen(new_sock, 1) < 0)
+    { 
+        std::cerr << "Erro ao colocar o servidor em modo de escuta." << std::endl;
+        close(new_sock);
+        return;
+    }
+
+    std::cout << "Servidor no cliente iniciado e aguardando conexões na porta " << htons(atoi(server_port.c_str())) << "." << std::endl;
+    
+    sockaddr_in server_addr;
+    socklen_t server_len = sizeof(server_addr);
+
+    // Aceita a conexão do cliente
+    this->sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
+
+    std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
+} */
+
+void Client::wait_connection()
+{
+    ports = {atoi(server_port.c_str()) + 1, atoi(server_port.c_str()) + 2, atoi(server_port.c_str()) + 3};
+    std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
+
+    int new_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (new_sock == -1)
+    {
+        std::cerr << "Erro ao criar o socket." << std::endl;
+        return;
+    }
+
+    int opt = 1;
+    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        std::cerr << "Erro ao configurar SO_REUSEADDR." << std::endl;
+        close(new_sock);
+        return;
+    }
+
+    memset(&client_addr, 0, sizeof(client_addr));
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_addr.s_addr = INADDR_ANY;
+
+    for (int i = 0; i < ports.size(); i++)
+    {
+        client_addr.sin_port = htons(ports[i]);
+
+        if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+        {
+            std::cerr << "Erro ao fazer o bind na porta " << htons(ports[i]) << "." << std::endl;
+        }
+        else
+        {
+            std::cout << "Bind realizado com sucesso na porta: " << ports[i] << std::endl;
+            break;
+        }
+    }
+
+    if (listen(new_sock, 1) < 0)
+    {
+        std::cerr << "Erro ao colocar o servidor em modo de escuta." << std::endl;
+        close(new_sock);
+        return;
+    }
+
+    sockaddr_in server_addr;
+    socklen_t server_len = sizeof(server_addr);
+    this->sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
+
+    std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
 }
 
 int16_t Client::connect_to_server()
@@ -141,6 +245,7 @@ int16_t Client::connect_to_server()
         {
             std::string username_with_null = username + '\0';
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
+            this->running = true;
             return curr_sock;
         }
         else
@@ -161,7 +266,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
     vector<Packet> packets_to_recv_queue;
     vector<Packet> packets_to_sync_queue;
 
-    while (this->sock > 0)
+    while (this->running)
     {
         // consumir do send_queue e enviar para o servidor na sock
         auto maybe_packet = send_queue.consume();
@@ -173,7 +278,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             cout << "Enviando comando: " << clean_payload << " do tipo: " << packet[0].get_type() << endl;
             for (auto pkt : packet)
             {
-                // semaforo
                 std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
                 ssize_t sent_bytes = FileInfo::sendAll(this->sock, packet_bytes.data(), packet_bytes.size(), 0);
                 if (sent_bytes < 0)
@@ -226,8 +330,8 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             else if (received_packet.get_type() == 3)
             {
                 std::cout << "Conexão encerrada." << std::endl;
+                this->running = false;
                 this->sock = -1;
-                // running = 0;
                 return;
             }
             else
@@ -236,7 +340,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             }
         }
 
-        // // TODO: ADD MUTEX LATER
+        // // TODO: ADD MUTEX LATER()
         // if (this->sock == 0)
         // {
         //     std::cout << "Conexão com servidor encerrada. (ANTES DO WAIT_CONNECTION)" << std::endl;
@@ -332,7 +436,7 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, 
     std::cout << "A thread para lidar com sincronização no cliente está executando." << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
-    while (this->sock > 0)
+    while (this->running)
     {
         auto packets = sync_queue.consume_blocking();
         // Verifica se há pacotes
@@ -389,24 +493,19 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, 
         }
     }
 
-    std::cout << "this->sock == 0 em handle_sync" << std::endl;
+    std::cout << "HANDLE_SYNC | RUNNING = FALSE" << std::endl;
     return;
 }
 
 void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
 {
     std::cout << "A thread para lidar com comandos no cliente está executando." << std::endl;
-    while (this->sock > 0)
+    while (this->running)
     {
         std::string cmd;
         std::cout << "Digite um comando: " << std::flush;
 
-        std::thread input_thread([&cmd](){ std::getline(std::cin, cmd); });
-        this_thread::sleep_for(chrono::milliseconds(100));
-        input_thread.detach();
-        // std::getline(std::cin, cmd);
-
-        
+        std::getline(std::cin, cmd);
 
         if (cmd.rfind("upload", 0) == 0)
         {
@@ -492,7 +591,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         }
     }
 
-    std::cout << "this->sock == 0 em send_commands" << std::endl;
+    std::cout << "SEND_COMMANDS RUNNING = FALSE" << std::endl;
     return;
 }
 
@@ -522,7 +621,7 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
     const size_t buf_size = 1024 * (sizeof(struct inotify_event) + NAME_MAX + 1);
     char *buffer = new char[buf_size];
 
-    while (this->sock > 0)
+    while (this->running)
     {
         int payload_size = read(fd, buffer, buf_size);
         if (payload_size < 0)
@@ -589,6 +688,46 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
     inotify_rm_watch(fd, wd);
     close(fd);
 
-    std::cout << "this->sock == 0 em monitor_sync_dir" << std::endl;
+    std::cout << "MONITOR_SYNC_DIR | RUNNING = FALSE" << std::endl;
+    return;
+}
+
+bool Client::is_socket_open() {
+    char buffer;
+    
+    int result = recv(this->sock, &buffer, 1, MSG_PEEK);
+
+    if (result == 0) {
+        // Socket closed by the peer
+        return false;
+    } else if (result < 0) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            // No data available, but the socket is still open
+            return true;
+            
+        } else {
+            // Other errors indicate the socket might be closed
+            perror("recv");
+            return false;
+        }
+    }
+    // Data is available; socket is still open
+    return true;
+}
+
+void Client::heartbeat()
+{
+    while (this->running)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        if (!this->is_socket_open())
+        {
+            std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
+            this->running = false;
+            wait_connection();
+            return;
+        }
+    }
+    std::cout << "HEARTBEAT | RUNNING = FALSE" << std::endl;
     return;
 }

@@ -6,16 +6,17 @@ int main(int argc, char const *argv[])
 {
     if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " <port>" << "type -p/-b"<< std::endl;
+        std::cerr << "Usage: " << argv[0] << " <port>" << "type -p/-b" << std::endl;
         return 1;
     }
 
     std::string type = argv[2];
+    
+    int port = std::stoi(argv[1]);
+    Server server(port, type); // Cria um servidor na porta especificada pelo usuário
+
     if (type == "-p")
     {
-        int port = std::stoi(argv[1]);
-        Server server(port, type); // Cria um servidor na porta especificada pelo usuário
-
         if (!server.start())
         {
             return 1;
@@ -42,7 +43,11 @@ int main(int argc, char const *argv[])
         string main_port = argv[4];
         std::cout << "Connecting to main server: " << main_ip_address << " | port: " << main_port << std::endl;
 
-        //connect_to_server(main_ip_address, main_port);
+        std::thread server_thread([&server, main_ip_address, main_port]()
+        {
+            int sock = server.connect_server(main_ip_address, main_port);
+            std::cout << sock << std::endl;
+        });
     }
 
     return 0;
