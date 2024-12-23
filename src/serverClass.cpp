@@ -4,8 +4,8 @@
 std::mutex send_packets_mutex;
 std::mutex recive_packets_mutex;
 
-// Construtor da classe que recebe a porta como argumento
-Server::Server(int port) : server_fd(-1), port(port)
+// Construtor da classe que recebe a porta e tipo como argumento
+Server::Server(int port, string type) : server_fd(-1), port(port), type(type)
 {
     memset(&server_addr, 0, sizeof(server_addr));
 }

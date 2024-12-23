@@ -8,6 +8,7 @@ class Server
 private:
     int server_fd;                           // File descriptor do socket do servidor
     sockaddr_in server_addr;                 // Estrutura de endereço do servidor
+    std::string type;
     int port;                                // Porta na qual o servidor escuta
     std::vector<std::thread> client_threads; // Vetor para armazenar threads de clientes
     std::map<int, std::string> clients;      // Map para armazenar os clientes conectados
@@ -15,7 +16,7 @@ private:
 
     public :
     // Construtor que inicializa o servidor com uma porta específica
-    explicit Server(int port);
+    explicit Server(int port, string type);
 
     // Método para iniciar o servidor (cria o socket, faz o bind e coloca o servidor em escuta)
     bool start();

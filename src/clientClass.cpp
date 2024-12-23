@@ -50,14 +50,18 @@ void Client::handle_connection()
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
 
-        std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
-                              { this->handle_io(send_queue, received_queue, sync_queue); });
+        // std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
+        //                       { this->handle_io(send_queue, received_queue, sync_queue); });
 
-        // cria as threds
+        active_threads.emplace_back(&Client::handle_io, this, std::ref(send_queue), std::ref(received_queue), std::ref(sync_queue));
+
         //  ===================================================================
         // cria thread de comandos
-        std::thread command_thread([this, &send_queue, &received_queue]()
-                                   { this->send_commands(send_queue, received_queue); });
+        // std::thread command_thread([this, &send_queue, &received_queue]()
+        //                            { this->send_commands(send_queue, received_queue); });
+
+        active_threads.emplace_back(&Client::send_commands, this, std::ref(send_queue), std::ref(received_queue));
+
         // pega os arquivos do servidor e do cliente e sincroniza
         // ===================================================================
         cout << "Sincronizando diretórios..." << endl;
@@ -65,25 +69,52 @@ void Client::handle_connection()
         cout << "Sincronização inicial concluída." << endl;
         //  ===================================================================
         //  criathread de sync
-        std::thread sync_thread([this, &sync_queue]()
-                                { this->handle_sync(sync_queue, "sync_dir", synced_files); });
+        // std::thread sync_thread([this, &sync_queue]()
+        //                         { this->handle_sync(sync_queue, "sync_dir", synced_files); });
+
+        active_threads.emplace_back(&Client::handle_sync, this, std::ref(sync_queue), "sync_dir", std::ref(synced_files));
+
         // cria thread de monitoramento
-        std::thread monitor_thread([this, &send_queue]()
-                                   { this->monitor_sync_dir("sync_dir", send_queue, synced_files); });
+        // std::thread monitor_thread([this, &send_queue]()
+        //                            { this->monitor_sync_dir("sync_dir", send_queue, synced_files); });
         // ===================================================================
 
-        io_thread.join();
-        sync_thread.join();
-        command_thread.join();
-        monitor_thread.join();
-        close(this->sock);
-        return;
+        active_threads.emplace_back(&Client::monitor_sync_dir, this, "sync_dir", std::ref(send_queue), std::ref(synced_files));
+
+        for (auto &thread : active_threads)
+        {
+            thread.join();
+        }
+
+        std::cout << "DEI JOIN EM TODAS AS THREADS!" << std::endl;
     }
+    
     else
     {
         cout << "Problema ao conectar com servidor!" << this->sock << endl;
-        return;
     }
+
+
+
+    return;
+}
+
+int Client::wait_connection()
+{
+    std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
+
+    int new_sock = 0;
+
+    while (new_sock == 0)
+    {
+        sockaddr_in server_addr;
+        socklen_t server_len = sizeof(server_addr);
+
+        new_sock = accept(this->sock, (struct sockaddr *)&server_addr, &server_len);
+    }
+
+    std::cout << "Conexão estabelecida com um novo servidor BACKUP." << std::endl;
+    return new_sock;
 }
 
 int16_t Client::connect_to_server()
@@ -155,9 +186,6 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
 
         ssize_t total_bytes = Packet::packet_header_size() + MAX_PAYLOAD_SIZE;
         std::vector<uint8_t> packet_bytes(total_bytes);
-        // sleep(1);
-        // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes);
-        // ssize_t received_bytes = FileInfo::recvAll(this->sock, packet_bytes, total_bytes);
         ssize_t received_bytes = FileInfo::wait_and_receive(this->sock, packet_bytes, total_bytes, std::chrono::milliseconds(100));
         if (received_bytes > 0)
         {
@@ -199,6 +227,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
             {
                 std::cout << "Conexão encerrada." << std::endl;
                 this->sock = -1;
+                // running = 0;
                 return;
             }
             else
@@ -206,7 +235,16 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
             }
         }
+
+        // // TODO: ADD MUTEX LATER
+        // if (this->sock == 0)
+        // {
+        //     std::cout << "Conexão com servidor encerrada. (ANTES DO WAIT_CONNECTION)" << std::endl;
+        //     this->sock = Client::wait_connection();
+        //     std::cout << "Conexão reestabelecida com BACKUP." << std::endl;
+        // }
     }
+
     return;
 }
 
@@ -350,6 +388,8 @@ void Client::handle_sync(Threads::AtomicQueue<std::vector<Packet>> &sync_queue, 
             }
         }
     }
+
+    std::cout << "this->sock == 0 em handle_sync" << std::endl;
     return;
 }
 
@@ -360,7 +400,13 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
     {
         std::string cmd;
         std::cout << "Digite um comando: " << std::flush;
-        std::getline(std::cin, cmd);
+
+        std::thread input_thread([&cmd](){ std::getline(std::cin, cmd); });
+        this_thread::sleep_for(chrono::milliseconds(100));
+        input_thread.detach();
+        // std::getline(std::cin, cmd);
+
+        
 
         if (cmd.rfind("upload", 0) == 0)
         {
@@ -446,6 +492,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         }
     }
 
+    std::cout << "this->sock == 0 em send_commands" << std::endl;
     return;
 }
 
@@ -541,5 +588,7 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
     delete[] buffer;
     inotify_rm_watch(fd, wd);
     close(fd);
+
+    std::cout << "this->sock == 0 em monitor_sync_dir" << std::endl;
     return;
 }
