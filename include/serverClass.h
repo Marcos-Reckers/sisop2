@@ -49,6 +49,7 @@ public:
     void connect_server(string main_ip_address, string main_port);
     void heartbeat(int curr_sock);
     bool is_socket_open(int &curr_sock);
+    void sync_servers(int &curr_sock);
 
     // Getters
     int getServerFd() const;
@@ -57,6 +58,7 @@ public:
     std::vector<std::thread> &getClientThreads();
     std::map<int, std::string> &getClients();
     std::string getUsername(int client_sock);
+    int getUserSocket(std::string username);
 };
 
 #endif // SERVERCLASS_H

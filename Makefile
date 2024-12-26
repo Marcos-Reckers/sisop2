@@ -38,6 +38,7 @@ CLIENT_NAME = $(CLIENT_BUILD_DIR)/myClient
 .PHONY: all release debug clean compile server client
 
 all: release
+rebuild: clean all
 
 release: CXXFLAGS += $(_CXXFLAGS_RELEASE)
 release: compile
@@ -75,3 +76,4 @@ $(TEST_BUILD_DIR):
 
 clean:
 	rm -rf $(BUILD_DIR)/*
+
