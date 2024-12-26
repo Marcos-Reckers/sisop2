@@ -58,7 +58,7 @@ public:
     std::vector<std::thread> &getClientThreads();
     std::map<int, std::string> &getClients();
     std::string getUsername(int client_sock);
-    int getUserSocket(std::string username);
+    vector<int> getUserSockets(std::string username);
 };
 
 #endif // SERVERCLASS_H

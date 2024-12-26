@@ -103,7 +103,7 @@ void Server::connect_server(string main_ip_address, string main_port)
     int curr_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (curr_sock < 0)
     {
-        cout << "Erro ao criar socket" << endl;
+        std::cout << "Erro ao criar socket" << endl;
         return;
     }
 
@@ -151,13 +151,13 @@ void Server::connect_server(string main_ip_address, string main_port)
         }
         else
         {
-            cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+            std::cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
             sleep(1);
             attempts++;
         }
     }
 
-    cout << "Falha na conexão TIMEOUT" << endl;
+    std::cout << "Falha na conexão TIMEOUT" << endl;
     close(curr_sock);
     return;
 }
@@ -216,26 +216,124 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
     while (client_sock > 0)
     {
-        // consumir do send_queue e enviar para o servidor na sock
-        auto maybe_packet = send_queue.consume();
-        if (maybe_packet.has_value())
+        if (type != "-b")
         {
-            auto packet = maybe_packet.value();
-
-            // ENVIA PRO OUTRO CLIENTE QUE NAO O QUE MANDOU
-            if (packet[0].get_type() == 4)
+            // consumir do send_queue e enviar para o servidor na sock
+            auto maybe_packet = send_queue.consume();
+            if (maybe_packet.has_value())
             {
-                for (auto client : clients)
-                {
-                    if ((getUsername(client_sock) == client.second && client.first != client_sock))
-                    {
-                        std::cout << "ENVIANDO PRO CLIENTE: " << getUsername(client_sock) << std::endl;
+                auto packet = maybe_packet.value();
 
+                // ENVIA PRO OUTRO CLIENTE QUE NAO O QUE MANDOU
+                if (packet[0].get_type() == 4)
+                {
+                    for (auto client : clients)
+                    {
+                        if ((getUsername(client_sock) == client.second && client.first != client_sock))
+                        {
+                            std::cout << "ENVIANDO PRO CLIENTE: " << getUsername(client_sock) << std::endl;
+
+                            for (auto pkt : packet)
+                            {
+                                pkt.set_type(2);
+                                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                                ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
+                                if (sent_bytes < 0)
+                                {
+                                    std::cerr << "Erro ao enviar pacote." << std::endl;
+                                }
+                                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+                            }
+                        }
+                    }
+
+                    std::cout << "ENVIANDO DIRETO PRO BACKUP" << std::endl;
+
+                    vector<int> backup_sockets = getUserSockets("BACKUP");
+
+                    for (auto socket : backup_sockets)
+                    {
                         for (auto pkt : packet)
                         {
                             pkt.set_type(2);
                             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                            ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
+                            ssize_t sent_bytes = FileInfo::sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
+                            if (sent_bytes < 0)
+                            {
+                                std::cerr << "Erro ao enviar pacote." << std::endl;
+                            }
+                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+                        }
+                    }
+
+                    continue;
+                }
+
+                // ENVIA SÓ PRA QUEM MANDOU
+                else if (packet[0].get_type() == 5)
+                {
+                    for (auto pkt : packet)
+                    {
+                        pkt.set_type(1);
+                        std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                        ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+                        if (sent_bytes < 0)
+                        {
+                            std::cerr << "Erro ao enviar pacote." << std::endl;
+                        }
+                        std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
+                    }
+                    continue;
+                }
+                // ????????????? MESMA COISA
+                else if (packet[0].get_type() == 3)
+                {
+                    for (auto pkt : packet)
+                    {
+                        std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                        ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
+                        if (sent_bytes < 0)
+                        {
+                            std::cerr << "Erro ao enviar pacote." << std::endl;
+                        }
+                        std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
+                    }
+                    continue;
+                }
+                // ENVIA PRA TODOS OS CLIENTES DE UM USUÁRIO
+                else
+                {
+                    for (auto client : clients)
+                    {
+                        if (getUsername(client_sock) == client.second || getUsername(client_sock) == "BACKUP")
+                        {
+                            std::cout << "ENVIANDO PRO CLIENTE: " << getUsername(client_sock) << std::endl;
+
+                            for (auto pkt : packet)
+                            {
+                                std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                                ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
+                                if (sent_bytes < 0)
+                                {
+                                    std::cerr << "Erro ao enviar pacote." << std::endl;
+                                }
+                                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
+                            }
+                        }
+                    }
+                    std::cout << "enviando para o backup" << std::endl;
+
+                    // TODO: enviar para o próximo backup também, no momento manda só pra UM backup e não para todos os backups
+
+                    vector<int> backup_sockets = getUserSockets("BACKUP");
+
+                    for (auto socket : backup_sockets)
+                    {
+                        for (auto pkt : packet)
+                        {
+                            pkt.set_type(2);
+                            std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                            ssize_t sent_bytes = FileInfo::sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
                             if (sent_bytes < 0)
                             {
                                 std::cerr << "Erro ao enviar pacote." << std::endl;
@@ -244,92 +342,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         }
                     }
                 }
-
-
-                std::cout << "ENVIANDO DIRETO PRO BACKUP" << std::endl;
-
-
-                for (auto pkt : packet)
-                {
-                    pkt.set_type(2);
-                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    ssize_t sent_bytes = FileInfo::sendAll(getUserSocket("BACKUP"), packet_bytes.data(), packet_bytes.size(), 0);
-                    if (sent_bytes < 0)
-                    {
-                        std::cerr << "Erro ao enviar pacote." << std::endl;
-                    }
-                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
-                }
-                
-                continue;
-            }
-
-            // ENVIA SÓ PRA QUEM MANDOU
-            else if (packet[0].get_type() == 5)
-            {
-                for (auto pkt : packet)
-                {
-                    pkt.set_type(1);
-                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-                    if (sent_bytes < 0)
-                    {
-                        std::cerr << "Erro ao enviar pacote." << std::endl;
-                    }
-                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
-                }
-                continue;
-            }
-            // ????????????? MESMA COISA
-            else if (packet[0].get_type() == 3)
-            {
-                for (auto pkt : packet)
-                {
-                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    ssize_t sent_bytes = FileInfo::sendAll(client_sock, packet_bytes.data(), packet_bytes.size(), 0);
-                    if (sent_bytes < 0)
-                    {
-                        std::cerr << "Erro ao enviar pacote." << std::endl;
-                    }
-                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
-                }
-                continue;
-            }
-            // ENVIA PRA TODOS OS CLIENTES DE UM USUÁRIO
-            else
-            {
-                for (auto client : clients)
-                {
-                    if (getUsername(client_sock) == client.second || getUsername(client_sock) == "BACKUP")
-                    {
-                        std::cout << "ENVIANDO PRO CLIENTE: " << getUsername(client_sock) << std::endl;
-
-                        for (auto pkt : packet)
-                        {
-                            std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                            ssize_t sent_bytes = FileInfo::sendAll(client.first, packet_bytes.data(), packet_bytes.size(), 0);
-                            if (sent_bytes < 0)
-                            {
-                                std::cerr << "Erro ao enviar pacote." << std::endl;
-                            }
-                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
-                        }
-                    }
-                }
-                cout << "enviando para o backup" << endl;
-
-                for (auto pkt : packet)
-                {
-                    pkt.set_type(2);
-                    std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
-                    ssize_t sent_bytes = FileInfo::sendAll(getUserSocket("BACKUP"), packet_bytes.data(), packet_bytes.size(), 0);
-                    if (sent_bytes < 0)
-                    {
-                        std::cerr << "Erro ao enviar pacote." << std::endl;
-                    }
-                    std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
-                }
-                
             }
         }
 
@@ -582,18 +594,19 @@ std::string Server::getUsername(int client_fd)
     return clients[client_fd];
 }
 
-int Server::getUserSocket(string username)
+vector<int> Server::getUserSockets(string username)
 {
-    for (const auto& client : clients)
+    vector<int> sockets;
+
+    for (const auto &client : clients)
     {
         if (client.second == username)
         {
-            return client.first;
+            sockets.push_back(client.first);
         }
     }
 
-    std::cout << "Usuário não encontrado" << std::endl;
-    return -1;
+    return sockets;
 }
 
 // Método para encerrar o servidor
