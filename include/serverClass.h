@@ -46,7 +46,9 @@ public:
 
     // Método para encerrar a conexão com um cliente
     void close_connection(int client_sock);
-    int connect_server(string main_ip_address, string main_port);
+    void connect_server(string main_ip_address, string main_port);
+    void heartbeat(int curr_sock);
+    bool is_socket_open(int &curr_sock);
 
     // Getters
     int getServerFd() const;

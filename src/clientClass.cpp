@@ -192,7 +192,7 @@ void Client::wait_connection()
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
 
-    for (int i = 0; i < ports.size(); i++)
+    for (size_t i = 0; i < ports.size(); i++)
     {
         client_addr.sin_port = htons(ports[i]);
 
@@ -696,6 +696,7 @@ bool Client::is_socket_open() {
     char buffer;
     
     int result = recv(this->sock, &buffer, 1, MSG_PEEK);
+    std::cout << "bom dia oq eu li do sock eh: " << result << std::endl;
 
     if (result == 0) {
         // Socket closed by the peer

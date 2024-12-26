@@ -230,7 +230,7 @@ inline static ssize_t receive(int sockfd, std::vector<uint8_t> &packet_data, siz
             return received; // Erro ou conexão fechada
         }
         total_received += received;
-    } while (total_received < total_bytes);
+    } while (static_cast<size_t>(total_received) < total_bytes);
 
     return total_received;
 }
@@ -311,7 +311,7 @@ ssize_t FileInfo::recvAll(int sockfd, std::vector<uint8_t> &packet_data, size_t 
             return received; // Erro ou conexão fechada
         }
         total_received += received;
-    } while (total_received < total_bytes);
+    } while (static_cast<size_t>(total_received) < total_bytes);
 
     return total_received;
 }
@@ -496,3 +496,5 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     }
     return {};
 }
+
+

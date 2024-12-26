@@ -45,9 +45,9 @@ int main(int argc, char const *argv[])
 
         std::thread server_thread([&server, main_ip_address, main_port]()
         {
-            int sock = server.connect_server(main_ip_address, main_port);
-            std::cout << sock << std::endl;
+            server.connect_server(main_ip_address, main_port);
         });
+        server_thread.join();
     }
 
     return 0;

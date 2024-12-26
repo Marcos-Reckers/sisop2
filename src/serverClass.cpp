@@ -5,7 +5,7 @@ std::mutex send_packets_mutex;
 std::mutex recive_packets_mutex;
 
 // Construtor da classe que recebe a porta e tipo como argumento
-Server::Server(int port, string type) : server_fd(-1), port(port), type(type)
+Server::Server(int port, string type) : server_fd(-1), type(type), port(port)
 {
     memset(&server_addr, 0, sizeof(server_addr));
 }
@@ -95,7 +95,7 @@ void Server::acceptClients()
     }
 }
 
-int Server::connect_server(string main_ip_address, string main_port)
+void Server::connect_server(string main_ip_address, string main_port)
 {
     std::cout << "Entrei connect_server" << std::endl;
     struct sockaddr_in serv_addr;
@@ -104,7 +104,7 @@ int Server::connect_server(string main_ip_address, string main_port)
     if (curr_sock < 0)
     {
         cout << "Erro ao criar socket" << endl;
-        return -1;
+        return;
     }
 
     main_server = gethostbyname(main_ip_address.c_str());
@@ -123,19 +123,78 @@ int Server::connect_server(string main_ip_address, string main_port)
         {
             std::string username_with_null = "BACKUP";
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
-            return curr_sock;
+
+            char buffer[256];
+            recv(curr_sock, buffer, 256, 0);
+
+            if(strcmp(buffer, "ok") == 0)
+            {
+                std::cout << "Conexão estabelecida com o servidor principal" << endl;
+
+                thread maintain_connection(&Server::heartbeat, this, curr_sock);
+                maintain_connection.join();
+            }
+
+            else
+            {
+                std::cout << "Conexão recusada pelo servidor principal" << endl;
+                close(curr_sock);
+                return;
+            }
         }
         else
         {
             cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
-            sleep(1); // Aguarda 1 segundo antes de tentar novamente
+            sleep(1);
             attempts++;
         }
     }
 
     cout << "Falha na conexão TIMEOUT" << endl;
     close(curr_sock);
-    return -3;
+    return;
+}
+
+bool Server::is_socket_open(int &curr_sock)
+{
+    char buffer;
+
+    int result = recv(curr_sock, &buffer, 1, MSG_PEEK);
+    std::cout << "result da sock do servidor p servidor: " << result << std::endl;
+
+    if (result == 0)
+    {
+        return false;
+    }
+
+    else if (result < 0)
+    {
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+        {
+            return true;
+        }
+        else
+        {
+            perror("recv");
+            return false;
+        }
+    }
+    return true;
+}
+
+void Server::heartbeat(int curr_sock)
+{
+    while (true)
+    {
+        if (!this->is_socket_open(curr_sock))
+        {
+            std::cout << "HEARTBEAT PAROU" << std::endl;
+            break;
+        }
+        std::cout << "HEARTBEAT VIVO!" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
+    return;
 }
 
 void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
@@ -150,6 +209,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         if (maybe_packet.has_value())
         {
             auto packet = maybe_packet.value();
+
+            // ENVIA PRO OUTRO CLIENTE QUE NAO O QUE MANDOU
             if (packet[0].get_type() == 4)
             {
                 for (auto client : clients)
@@ -171,6 +232,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
                 continue;
             }
+
+            // ENVIA SÓ PRA QUEM MANDOU
             else if (packet[0].get_type() == 5)
             {
                 for (auto pkt : packet)
@@ -186,6 +249,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
                 continue;
             }
+            // ????????????? MESMA COISA
             else if (packet[0].get_type() == 3)
             {
                 for (auto pkt : packet)
@@ -199,7 +263,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
                 }
                 continue;
-            } 
+            }
+            // ENVIA PRA TODOS OS CLIENTES DE UM USUÁRIO
             else
             {
                 for (auto client : clients)
