@@ -5351,7 +5351,7 @@
       "containerId": "TKqtsIt8oaukCDFmqJV7w",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -5437,7 +5437,7 @@
       "containerId": "xlIvqGf-CkpS08VP7D7zF",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -7595,7 +7595,7 @@
       "containerId": "RxQjirtHMNkp96UG5ECLc",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -7673,7 +7673,7 @@
       "containerId": "6NyhNWheN50SOXl7LNhcM",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -9910,7 +9910,7 @@
       "containerId": "1XbXeCkBE897y5drZW7vx",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -10078,7 +10078,7 @@
       "containerId": "qT7MT0G73vMkaNp7islOE",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -10164,7 +10164,7 @@
       "containerId": "vpwZfLTW5loyy4PqQ-rOz",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -10658,7 +10658,7 @@
       "containerId": "NDI3d9beAh841XYpJ8BOx",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -10736,7 +10736,7 @@
       "containerId": "_LOCeIefexNuMnwU36Zfi",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -11048,7 +11048,7 @@
       "containerId": "R0w_f3o6tx_dgKwdm82D5",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -12593,7 +12593,7 @@
       "containerId": "X6HUUpe-kRHl-Vf5Wjwl2",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -12679,7 +12679,7 @@
       "containerId": "BJRsU6-NTNHjJIDulae5W",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -14667,7 +14667,7 @@
       "containerId": "U3l29nNEp8wvoFF-RGhE1",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -14745,7 +14745,7 @@
       "containerId": "oQh9N8QSHgqdBXG5kBKSy",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -15157,7 +15157,7 @@
       "containerId": "9vnGHwvhQ8BGBs_3x-loK",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -15320,7 +15320,7 @@
       "containerId": "ShJDtBIPcWWS0Ig6rp9AE",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -15406,7 +15406,7 @@
       "containerId": "fmCop6xOe_LsNx4KLpLDL",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -15900,7 +15900,7 @@
       "containerId": "DApFcZUSw3YkND18B6QHf",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -15978,7 +15978,7 @@
       "containerId": "BPOJaTzWirNJBTlHmm0LE",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -16290,7 +16290,7 @@
       "containerId": "B0KGvJJz-Jvlx9aG-6Kxu",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -17194,7 +17194,7 @@
       "containerId": null,
       "originalText": "myClient <user> <Server_P> <porta>",
       "lineHeight": 1.25,
-      "baseline": 50
+      "baseline": 49
     },
     {
       "type": "arrow",
@@ -19054,7 +19054,7 @@
       "containerId": "zU1vXlbmKeOO5bZu0xQjl",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -19140,7 +19140,7 @@
       "containerId": "uciuPAFJXlU1AUt5pN5cf",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -21128,7 +21128,7 @@
       "containerId": "I3Q16Qf-6NJ9bkLxmOL7p",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -21206,7 +21206,7 @@
       "containerId": "av_pvuLqU-a-Q19_69SYy",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -21618,7 +21618,7 @@
       "containerId": "u2TTPARxTRfxjUmL4c4cN",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -21781,7 +21781,7 @@
       "containerId": "NlKngKO0tDOE-Aj5PLOrH",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -21867,7 +21867,7 @@
       "containerId": "7GcQxVYNuef3tTiAlaPQC",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -22361,7 +22361,7 @@
       "containerId": "kYx8gyDzH8raE2ki79qrX",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -22439,7 +22439,7 @@
       "containerId": "vbOKJUJDblaW32rlHUfIX",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -22751,7 +22751,7 @@
       "containerId": "hAbTzfh4q42RMowZkG8xJ",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -23651,7 +23651,7 @@
       "containerId": null,
       "originalText": "myClient jv <LOCALHOST> <PORTA>",
       "lineHeight": 1.25,
-      "baseline": 50
+      "baseline": 49
     },
     {
       "type": "diamond",
@@ -23745,7 +23745,7 @@
       "containerId": null,
       "originalText": "FE",
       "lineHeight": 1.25,
-      "baseline": 118
+      "baseline": 119
     },
     {
       "type": "arrow",
@@ -26305,7 +26305,7 @@
       "containerId": null,
       "originalText": "myClient jv <LOCALHOST> <PORTA>",
       "lineHeight": 1.25,
-      "baseline": 50
+      "baseline": 49
     },
     {
       "type": "diamond",
@@ -26391,7 +26391,7 @@
       "containerId": null,
       "originalText": "FE",
       "lineHeight": 1.25,
-      "baseline": 118
+      "baseline": 119
     },
     {
       "type": "arrow",
@@ -26952,7 +26952,7 @@
       "containerId": "pKjrtgWKw1DFIO6S_sHxs",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -27042,7 +27042,7 @@
       "containerId": "F21wCi4WT5D6Ypj5MHRBI",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -27556,7 +27556,7 @@
       "containerId": "aA1UrknLWY4LgL56oomff",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -27638,7 +27638,7 @@
       "containerId": "F0EzSgz8dpdHfTP972uWR",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -27970,7 +27970,7 @@
       "containerId": "GAGzKlw5XtqBssk1QJRBZ",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -28283,7 +28283,7 @@
       "containerId": "MU29JO8CRZON3JfDPN0ew",
       "originalText": "Command_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -28369,7 +28369,7 @@
       "containerId": "Ao06uZ601G557_ZjvYaMF",
       "originalText": "Sync_thread",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "arrow",
@@ -29503,7 +29503,7 @@
       "containerId": "euIhG1dPKf66b7OXl_v1a",
       "originalText": "recived_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -29581,7 +29581,7 @@
       "containerId": "H33Sfqtc00LGmatm3mFTX",
       "originalText": "sync_queue",
       "lineHeight": 1.25,
-      "baseline": 18
+      "baseline": 17
     },
     {
       "type": "rectangle",
@@ -29893,7 +29893,7 @@
       "containerId": "X0i3BLBxfiaeUiuyLHV4H",
       "originalText": "Envia comandos e envia e recebe  arquivos",
       "lineHeight": 1.25,
-      "baseline": 69
+      "baseline": 68
     },
     {
       "type": "arrow",
@@ -30151,7 +30151,7 @@
       "containerId": null,
       "originalText": "RUN:\n    Maquina 1: \n        - ./server <porta> \"-p\"\n    Maquina 2:\n        - ./myClient <user> <server_P_IP> <server_P_port> \n    Maquina 3:\n        - ./server <porta> \"-b\" <server_P_ip> <porta_P>\n    Maquina 4:\n        - ./server <porta> \"-b\" <server_P_ip> <porta_P> \n    Maquina 5:\n        - ./myClient <user> <server_P_IP> <server_P_port>",
       "lineHeight": 1.2,
-      "baseline": 466
+      "baseline": 467
     },
     {
       "type": "rectangle",
@@ -30181,6 +30181,71 @@
       "updated": 1734975182430,
       "link": null,
       "locked": false
+    },
+    {
+      "id": "thEma0w6AQemR_ZFBhG8m",
+      "type": "rectangle",
+      "x": 324.87366453863433,
+      "y": 5220.407809879381,
+      "width": 2015.9999999999998,
+      "height": 966,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": {
+        "type": 3
+      },
+      "seed": 2127275150,
+      "version": 120,
+      "versionNonce": 790748178,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1735411892934,
+      "link": null,
+      "locked": false
+    },
+    {
+      "id": "XBxIfAvXgNWoPH8qzYDi-",
+      "type": "text",
+      "x": 512.8736645386343,
+      "y": 5340.407809879381,
+      "width": 1741.139404296875,
+      "height": 360,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2129208782,
+      "version": 505,
+      "versionNonce": 1705963154,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1735411888175,
+      "link": null,
+      "locked": false,
+      "text": "Roteiro pra hj - \n\nFazer o servidor backup se conectar com o cliente.\n    -> fazer o servidor principal mandar uma lista de clientes conectados\n        Toda vez q um servidor b se conecta, envia o pacote de clientes\n        Toda vez que um cliente se conecta enviar q esse cliente se conectou\n        Toda vez que um cliente se desconecta envia que esse cliente se desconectou\n   -> Quando o servidor P falha, faz um broadcast de conexão com todos os clientes conhecidos",
+      "fontSize": 36,
+      "fontFamily": 1,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "baseline": 347,
+      "containerId": null,
+      "originalText": "Roteiro pra hj - \n\nFazer o servidor backup se conectar com o cliente.\n    -> fazer o servidor principal mandar uma lista de clientes conectados\n        Toda vez q um servidor b se conecta, envia o pacote de clientes\n        Toda vez que um cliente se conecta enviar q esse cliente se conectou\n        Toda vez que um cliente se desconecta envia que esse cliente se desconectou\n   -> Quando o servidor P falha, faz um broadcast de conexão com todos os clientes conhecidos",
+      "lineHeight": 1.25
     }
   ],
   "appState": {

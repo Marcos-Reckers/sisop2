@@ -93,6 +93,13 @@ Packet Packet::create_packet_cmd(const std::string &command)
     {
         return Packet(5, 1, 1, original_payload_size, payload);
     }
+    else if (command.find("client_info") != std::string::npos)
+    {
+        std::cout << "criando pacote client info" << std::endl;
+        Packet pkt = Packet(6, 1, 1, original_payload_size, payload);
+        std::cout << "terminei de criar pacote client info" << std::endl;
+        return pkt;
+    }
     else
     {
         return Packet(1, 1, 1, original_payload_size, payload);

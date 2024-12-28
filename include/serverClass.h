@@ -3,6 +3,14 @@
 
 #include "fileInfo.h"
 
+// cria struct para armazenar informações do cliente
+struct ClientInfo
+{
+    int sock;
+    std::string username;
+    sockaddr_in addr;
+};
+
 class Server
 {
 private:
@@ -14,6 +22,8 @@ private:
     std::vector<std::thread> client_threads; // Vetor para armazenar threads de clientes
     std::map<int, std::string> clients;      // Map para armazenar os clientes conectados
     std::map<std::string, std::unique_ptr<sem_t>> active;
+
+    std::vector<ClientInfo> clients_info;
 
     vector<int> ports;
 
@@ -50,6 +60,9 @@ public:
     void heartbeat(int curr_sock);
     bool is_socket_open(int &curr_sock);
     void sync_servers(int &curr_sock);
+
+    string create_string_from_client_info(vector<ClientInfo> &clients_info);
+
 
     // Getters
     int getServerFd() const;

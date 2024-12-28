@@ -411,6 +411,13 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
 
         return pkt_files;
     }
+    else if (command.find("client_info") != std::string::npos)
+    {
+        std::cout << "create packet vector do client info" << std::endl;
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
+    }
     else if (command == "delete" || command == "delete_sync" || command == "delete_broadcast")
     {
         FileInfo file_info;

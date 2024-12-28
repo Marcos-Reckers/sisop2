@@ -3,6 +3,7 @@
 
 std::mutex send_packets_mutex;
 std::mutex recive_packets_mutex;
+std::mutex add_client_mutex;
 
 // Construtor da classe que recebe a porta e tipo como argumento
 Server::Server(int port, string type) : server_fd(-1), type(type), port(port)
@@ -80,7 +81,22 @@ void Server::acceptClients()
                 send(client_fd, "ok", 2, 0);
             }
 
+            add_client_mutex.lock();
+
             addClient(client_fd, username_str);
+            clients_info.push_back(ClientInfo{client_fd, username_str, client_addr});
+
+            // print everything in clients_info
+            std::cout << "Clients info: " << std::endl;
+            for (auto client : clients_info)
+            {
+                char client_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+                std::cout << "SOCK: " << client.sock << " USERNAME: " << client.username << " ADDRESS: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
+            }
+
+            add_client_mutex.unlock();
+
             client_threads.emplace_back(&Server::handle_communication, this, client_fd);
 
             // handle_communication igual do cliente
@@ -162,10 +178,10 @@ void Server::connect_server(string main_ip_address, string main_port)
     return;
 }
 
-void Server::sync_servers(int &curr_sock)
-{
-    return;
-}
+// void Server::sync_servers(int &curr_sock)
+// {
+//     return;
+// }
 
 bool Server::is_socket_open(int &curr_sock)
 {
@@ -196,6 +212,8 @@ bool Server::is_socket_open(int &curr_sock)
 
 void Server::heartbeat(int curr_sock)
 {
+    std::cout << "entrei heartbeat" << std::endl;
+
     while (true)
     {
         if (!this->is_socket_open(curr_sock))
@@ -285,7 +303,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     }
                     continue;
                 }
-                // ????????????? MESMA COISA
+
                 else if (packet[0].get_type() == 3)
                 {
                     for (auto pkt : packet)
@@ -300,6 +318,29 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     }
                     continue;
                 }
+                else if (packet[0].get_type() == 6)
+                {
+                    std::cout << "ENVIANDO CLIENTES PRO BACKUP" << std::endl;
+
+                    vector<int> backup_sockets = getUserSockets("BACKUP");
+
+                    for (auto socket : backup_sockets)
+                    {
+                        for (auto pkt : packet)
+                        {
+                            std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+                            ssize_t sent_bytes = FileInfo::sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
+                            if (sent_bytes < 0)
+                            {
+                                std::cerr << "Erro ao enviar pacote." << std::endl;
+                            }
+                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+                        }
+                    }
+
+                    continue;
+                }
+
                 // ENVIA PRA TODOS OS CLIENTES DE UM USUÁRIO
                 else
                 {
@@ -362,14 +403,42 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
             std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
             removeClient(client_sock);
+
+            clients_info.erase(std::remove_if(clients_info.begin(), clients_info.end(), [client_sock](ClientInfo &client_info)
+                                              { return client_info.sock == client_sock; }),
+                               clients_info.end());
+
+            // ClientInfo *client = find_client_info(clients_info, client_sock);
+            string packet_string = create_string_from_client_info(clients_info);
+            std::cout << "Enviando informações do cliente APÓS REMOVER: " << packet_string << std::endl;
+
+            auto packet_client_info = FileInfo::create_packet_vector(packet_string);
+            send_queue.produce(packet_client_info);
+            std::cout << "Pacote criado do client_info e enviado pra fila" << std::endl;
+
+            std::cout << "Printando o pacote do client_info" << std::endl;
+            for (auto pkt : packet_client_info)
+            {
+                pkt.print();
+            }
+            
+            // for (auto client : clients_info)
+            // {
+            //     char client_ip[INET_ADDRSTRLEN];
+            //     inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+            //     std::cout << "SOCK: " << client.sock << " USERNAME: " << client.username << " ADDRESS: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
+            // }
+
             close(client_sock);
-            client_sock = -1;
+            //client_sock = -1;
         }
         else if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
             cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tamanho: " << received_bytes << endl;
-
+            cout << "pacote recebido: ";
+            received_packet.print();
+            cout << endl;
             if (received_packet.get_type() == 1)
             {
                 if (received_packet.get_seqn() == received_packet.get_total_packets())
@@ -396,6 +465,19 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     packets_to_sync_queue.push_back(received_packet);
                 }
             }
+            else if (received_packet.get_type() == 6)
+            {
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
+                {
+                    packets_to_sync_queue.push_back(received_packet);
+                    sync_queue.produce(packets_to_sync_queue);
+                    packets_to_sync_queue.clear();
+                }
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
+                {
+                    packets_to_sync_queue.push_back(received_packet);
+                }
+            }
             else
             {
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
@@ -407,6 +489,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
 void Server::handle_communication(int client_sock)
 {
+    std::cout << "entrei handle_communication" << std::endl;
+
     if (client_sock > 0)
     {
         // Codigo para deixar não bloqeante entre recv e send
@@ -458,6 +542,26 @@ void Server::handle_communication(int client_sock)
         std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
                                 { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
 
+        if (getUsername(client_sock).find("BACKUP") == std::string::npos && !clients_info.empty())
+        {
+
+            // ClientInfo *client = find_client_info(clients_info, client_sock);
+            string packet_string = create_string_from_client_info(clients_info);
+            std::cout << "Enviando informações do cliente: " << packet_string << std::endl;
+
+            auto packet_client_info = FileInfo::create_packet_vector(packet_string);
+            send_queue.produce(packet_client_info);
+            std::cout << "Pacote criado do client_info e enviado pra fila" << std::endl;
+
+            std::cout << "Printando o pacote do client_info" << std::endl;
+            for (auto pkt : packet_client_info)
+            {
+                pkt.print();
+            }
+        }
+
+        std::cout << "depois do if do cliente != backup" << std::endl;
+
         io_thread.join();
         command_thread.join();
         sync_thread.join();
@@ -469,6 +573,21 @@ void Server::handle_communication(int client_sock)
         std::cerr << "Erro ao aceitar conexão do cliente." << std::endl;
         return;
     }
+}
+
+string Server::create_string_from_client_info(vector<ClientInfo> &clients_info)
+{
+    string clients_info_str = "client_info;";
+    for (auto client : clients_info)
+    {
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+        string client_info_str = std::to_string(client.sock) + ";" + client.username + ";" + client_ip + ";" + std::to_string(ntohs(client.addr.sin_port));
+        clients_info_str = clients_info_str + "-" + client_info_str;
+        cout << "client_info_str: " << client_info_str << endl;
+    }
+    cout << "clients_info_str: " << clients_info_str << endl;
+    return clients_info_str;
 }
 
 void Server::handle_commands(int &client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
@@ -573,6 +692,12 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 FileInfo::delete_file(file_path);
                 std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
             }
+        }
+        if (packets[0].get_type() == 6)
+        {
+            packets[0].clean_payload();
+            string clients_info_string = packets[0].get_payload_as_string();
+            std::cout << "Recebido lista de clientes: " << clients_info_string << std::endl;
         }
     }
 }
