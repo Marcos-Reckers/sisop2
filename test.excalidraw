@@ -23655,8 +23655,8 @@
     },
     {
       "type": "diamond",
-      "version": 735,
-      "versionNonce": 1153840467,
+      "version": 736,
+      "versionNonce": 443697678,
       "isDeleted": false,
       "id": "qYi3iw3W_C1nincggeXf4",
       "fillStyle": "solid",
@@ -23689,10 +23689,6 @@
           "type": "arrow"
         },
         {
-          "id": "wJPJX_a8hVofjHIFL6g0A",
-          "type": "arrow"
-        },
-        {
           "id": "E_jVLqCR1DA2hMBnGcuHG",
           "type": "arrow"
         },
@@ -23705,7 +23701,7 @@
           "type": "arrow"
         }
       ],
-      "updated": 1734800022795,
+      "updated": 1735418801585,
       "link": null,
       "locked": false
     },
@@ -24136,54 +24132,6 @@
         [
           220.77548580250004,
           -9.76329942573443
-        ]
-      ]
-    },
-    {
-      "type": "arrow",
-      "version": 662,
-      "versionNonce": 672193299,
-      "isDeleted": false,
-      "id": "wJPJX_a8hVofjHIFL6g0A",
-      "fillStyle": "solid",
-      "strokeWidth": 4,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "angle": 0,
-      "x": 4416.760209160035,
-      "y": 6187.144557739689,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "#ffc9c9",
-      "width": 320.15907353983494,
-      "height": 30.511583764114675,
-      "seed": 1290316450,
-      "groupIds": [],
-      "frameId": null,
-      "roundness": {
-        "type": 2
-      },
-      "boundElements": [],
-      "updated": 1734800022795,
-      "link": null,
-      "locked": false,
-      "startBinding": null,
-      "endBinding": {
-        "elementId": "qYi3iw3W_C1nincggeXf4",
-        "focus": 0.613246664183921,
-        "gap": 23.872544443601015
-      },
-      "lastCommittedPoint": null,
-      "startArrowhead": "arrow",
-      "endArrowhead": "arrow",
-      "points": [
-        [
-          0,
-          0
-        ],
-        [
-          320.15907353983494,
-          30.511583764114675
         ]
       ]
     },
@@ -30217,7 +30165,7 @@
       "x": 512.8736645386343,
       "y": 5340.407809879381,
       "width": 1741.139404296875,
-      "height": 360,
+      "height": 180,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -30230,21 +30178,21 @@
       "frameId": null,
       "roundness": null,
       "seed": 2129208782,
-      "version": 505,
-      "versionNonce": 1705963154,
+      "version": 511,
+      "versionNonce": 879293586,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1735411888175,
+      "updated": 1735418673566,
       "link": null,
       "locked": false,
-      "text": "Roteiro pra hj - \n\nFazer o servidor backup se conectar com o cliente.\n    -> fazer o servidor principal mandar uma lista de clientes conectados\n        Toda vez q um servidor b se conecta, envia o pacote de clientes\n        Toda vez que um cliente se conecta enviar q esse cliente se conectou\n        Toda vez que um cliente se desconecta envia que esse cliente se desconectou\n   -> Quando o servidor P falha, faz um broadcast de conexão com todos os clientes conhecidos",
+      "text": "Roteiro pra hj - \n\nFazer o servidor backup se conectar com o cliente.\n   -> Quando o servidor P falha, faz um broadcast de conexão com todos os clientes conhecidos",
       "fontSize": 36,
       "fontFamily": 1,
       "textAlign": "left",
       "verticalAlign": "top",
-      "baseline": 347,
+      "baseline": 167,
       "containerId": null,
-      "originalText": "Roteiro pra hj - \n\nFazer o servidor backup se conectar com o cliente.\n    -> fazer o servidor principal mandar uma lista de clientes conectados\n        Toda vez q um servidor b se conecta, envia o pacote de clientes\n        Toda vez que um cliente se conecta enviar q esse cliente se conectou\n        Toda vez que um cliente se desconecta envia que esse cliente se desconectou\n   -> Quando o servidor P falha, faz um broadcast de conexão com todos os clientes conhecidos",
+      "originalText": "Roteiro pra hj - \n\nFazer o servidor backup se conectar com o cliente.\n   -> Quando o servidor P falha, faz um broadcast de conexão com todos os clientes conhecidos",
       "lineHeight": 1.25
     }
   ],

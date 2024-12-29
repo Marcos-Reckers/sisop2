@@ -421,7 +421,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             {
                 pkt.print();
             }
-            
+
             // for (auto client : clients_info)
             // {
             //     char client_ip[INET_ADDRSTRLEN];
@@ -430,7 +430,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             // }
 
             close(client_sock);
-            //client_sock = -1;
+            // client_sock = -1;
         }
         else if (received_bytes > 0)
         {
@@ -521,12 +521,8 @@ void Server::handle_communication(int client_sock)
 
         std::thread io_thread(
             [this, &client_sock, &send_queue, &received_queue, &sync_queue]()
-            {
-                this->handle_io(client_sock,
-                                send_queue,
-                                received_queue,
-                                sync_queue);
-            });
+            { this->handle_io(client_sock, send_queue, received_queue, sync_queue); });
+
         // Cria a pasta do cliente no servidor para sincronização
         // ===================================================================
         create_sync_dir(client_sock);
@@ -539,8 +535,8 @@ void Server::handle_communication(int client_sock)
         std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
         //  criathread de sync
-        std::thread sync_thread([&client_sock, client_folder, &send_queue, &sync_queue]()
-                                { Server::handle_sync(client_sock, client_folder, send_queue, sync_queue); });
+        std::thread sync_thread([this, &client_sock, client_folder, &send_queue, &sync_queue]()
+                                { this->handle_sync(client_sock, client_folder, send_queue, sync_queue); });
 
         if (getUsername(client_sock).find("BACKUP") == std::string::npos && !clients_info.empty())
         {
@@ -582,7 +578,7 @@ string Server::create_string_from_client_info(vector<ClientInfo> &clients_info)
     {
         char client_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
-        string client_info_str = std::to_string(client.sock) + ";" + client.username + ";" + client_ip + ";" + std::to_string(ntohs(client.addr.sin_port));
+        string client_info_str = std::to_string(client.sock) + ";" + client.username + ";" + client_ip + ";" + std::to_string(ntohs(client.addr.sin_port)) + ";";
         clients_info_str = clients_info_str + "-" + client_info_str;
         cout << "client_info_str: " << client_info_str << endl;
     }
@@ -697,7 +693,45 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
         {
             packets[0].clean_payload();
             string clients_info_string = packets[0].get_payload_as_string();
-            std::cout << "Recebido lista de clientes: " << clients_info_string << std::endl;
+            // monta a estrutura de clients_info a partir da string
+            clients_info.clear();
+
+            vector<vector<string>> clients_info_vector = FileInfo::split_string(clients_info_string);
+
+            for (auto client_info : clients_info_vector)
+            {
+                int sock = std::stoi(client_info[0]);
+                std::string username = client_info[1];
+
+                struct sockaddr_in addr;
+                addr.sin_family = AF_INET;
+                addr.sin_addr.s_addr = inet_addr(client_info[2].c_str());
+
+                try
+                {
+                    addr.sin_port = htons(std::stoi(client_info[3]));
+                }
+                catch (const std::invalid_argument &e)
+                {
+                    std::cerr << "Invalid port number: " << client_info[3] << std::endl;
+                    continue;
+                }
+                catch (const std::out_of_range &e)
+                {
+                    std::cerr << "Port number out of range: " << client_info[3] << std::endl;
+                    continue;
+                }
+
+                clients_info.push_back(ClientInfo{sock, username, addr});
+            }
+
+            std::cout << "Clients info RECEBIDO NO BACKUP: " << std::endl;
+            for (auto client : clients_info)
+            {
+                char client_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+                std::cout << "SOCK: " << client.sock << " USERNAME: " << client.username << " ADDRESS: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
+            }
         }
     }
 }

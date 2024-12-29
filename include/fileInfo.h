@@ -70,6 +70,8 @@ public:
     void static delete_file(string file_path);
     void static send_cmd(std::string cmd, int sock);
 
+    static vector<vector<string>> split_string(string str);
+
 
     static string receive_file(vector<Packet> packets, string dst_folder);
     static FileInfo receive_file_info(vector<Packet> &received_packet);

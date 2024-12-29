@@ -504,4 +504,49 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
     return {};
 }
 
+vector<vector<string>> FileInfo::split_string(string str)
+{
+    //remove o "client_info;" do inicio da string
+    str.erase(0, 12);
+    
+    // procura por "-" e pega a string de um tracinho até o próximo tracinho ou até o final da string e coloca em um vetor de strings 
+    vector<string> clients_info_vector;
+    vector<string> client_info_small;
+    vector<vector<string>> clients_info;
+    size_t pos = 0;
+    string token;
+    while ((pos = str.find("-")) != string::npos)
+    {
+        token = str.substr(0, pos);
+        clients_info_vector.push_back(token);
+        str.erase(0, pos + 1);
+    }
+
+    // Adiciona o último token após o último "-"
+    clients_info_vector.push_back(str);
+
+    for (auto client_info : clients_info_vector)
+    {
+        // separa a string em um vetor de strings com os dados do cliente 
+        size_t pos = 0;
+        string token;
+
+        while ((pos = client_info.find(";")) != string::npos)
+        {
+            token = client_info.substr(0, pos);
+            client_info_small.push_back(token);
+            client_info.erase(0, pos + 1);
+        }
+        // Adiciona o último token após o último ";"
+        client_info_small.push_back(client_info);
+
+        clients_info.push_back(client_info_small);
+        client_info_small.clear();
+    }
+
+    clients_info.erase(clients_info.begin());
+
+    return clients_info;
+}
+
 
