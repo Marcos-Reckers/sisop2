@@ -61,6 +61,8 @@ public:
     bool is_socket_open(int &curr_sock);
     void sync_servers(int &curr_sock);
 
+    void connect_clients();
+
     string create_string_from_client_info(vector<ClientInfo> &clients_info);
 
 

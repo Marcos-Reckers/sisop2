@@ -155,6 +155,10 @@ void Server::connect_server(string main_ip_address, string main_port)
                 // sync_servers.join();
 
                 maintain_connection.join();
+
+                thread connecting_to_clients(&Server::connect_clients, this);
+                connecting_to_clients.join();
+
                 backup_communication.join();
             }
 
@@ -182,6 +186,48 @@ void Server::connect_server(string main_ip_address, string main_port)
 // {
 //     return;
 // }
+
+void Server::connect_clients(){
+    
+    // servidor vai atrás dos clientes no clients_info
+    // connect pra cada um deles
+    // abre todas as threads pra cada um deles
+
+    std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
+
+    for (auto client : clients_info) {
+
+        if(client.username == "BACKUP"){
+            continue;
+        }
+
+        client.addr.sin_port = htons(atoi("8081"));
+
+        int curr_sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (curr_sock < 0)
+        {
+            cout << "Erro ao criar socket" << endl;
+            return;
+        }
+        
+        // Tenta conectar ao servidor por 100 segundos
+        int attempts = 0;
+        while (attempts < 10)
+        {
+            if (connect(curr_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
+            {
+                std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
+                break;
+            }
+            else
+            {
+                cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+                sleep(1); // Aguarda 1 segundo antes de tentar novamente
+                attempts++;
+            }
+        }     
+    }
+}
 
 bool Server::is_socket_open(int &curr_sock)
 {
@@ -706,22 +752,7 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 struct sockaddr_in addr;
                 addr.sin_family = AF_INET;
                 addr.sin_addr.s_addr = inet_addr(client_info[2].c_str());
-
-                try
-                {
-                    addr.sin_port = htons(std::stoi(client_info[3]));
-                }
-                catch (const std::invalid_argument &e)
-                {
-                    std::cerr << "Invalid port number: " << client_info[3] << std::endl;
-                    continue;
-                }
-                catch (const std::out_of_range &e)
-                {
-                    std::cerr << "Port number out of range: " << client_info[3] << std::endl;
-                    continue;
-                }
-
+                addr.sin_port = htons(std::stoi(client_info[3]));
                 clients_info.push_back(ClientInfo{sock, username, addr});
             }
 

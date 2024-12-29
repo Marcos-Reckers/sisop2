@@ -217,6 +217,9 @@ void Client::wait_connection()
     sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
     this->sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
+    //this->running = true;
+    
+
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
 }
@@ -724,7 +727,7 @@ void Client::heartbeat()
         if (!this->is_socket_open())
         {
             std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
-            this->running = false;
+            //this->running = false;
             wait_connection();
             return;
         }
