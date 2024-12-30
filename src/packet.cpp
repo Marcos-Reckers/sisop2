@@ -4,6 +4,7 @@
 #include <cstring>
 #include "fileInfo.h"
 
+
 Packet::Packet() : type(0), seqn(0), total_pakets(0), payload_size(0), payload() {}
 
 Packet::Packet(uint16_t type, uint16_t seqn, uint32_t total_pakets, uint16_t payload_size, const std::vector<char> &payload)
@@ -67,6 +68,20 @@ Packet Packet::bytes_to_packet(std::vector<uint8_t> &bytes)
     return pkt;
 }
 
+// Packet Packet::create_user_packet(const std::string &username, int type)
+// {
+//     std::string payload = username;
+//     int original_payload_size = payload.size();
+//     // verifica o tamnaho do payload + base_size, diminui de 4106 e adiciona "|"s para completar
+//     int complete_payload = packet_header_size() + MAX_PAYLOAD_SIZE - (packet_header_size() + payload.size());
+//     for (int i = 0; i < complete_payload; i++)
+//     {
+//         payload.push_back('|');
+//     }
+//     std::vector<char> payload_vec = std::vector<char>(payload.begin(), payload.end());
+//     return Packet(type, 1, 1, payload_vec.size(), payload_vec);
+// }
+
 Packet Packet::create_packet_cmd(const std::string &command)
 {
     std::vector<char> payload = std::vector<char>(command.begin(), command.end());
@@ -95,9 +110,7 @@ Packet Packet::create_packet_cmd(const std::string &command)
     }
     else if (command.find("client_info") != std::string::npos)
     {
-        std::cout << "criando pacote client info" << std::endl;
         Packet pkt = Packet(6, 1, 1, original_payload_size, payload);
-        std::cout << "terminei de criar pacote client info" << std::endl;
         return pkt;
     }
     else

@@ -155,7 +155,24 @@ void Server::connect_server(string main_ip_address, string main_port)
                 // sync_servers.join();
 
                 maintain_connection.join();
+                this->type = "-p";
 
+                for (size_t i = 0; i < clients_info.size(); i++)
+                {
+                    if (clients_info[i].username.find("BACKUP") != std::string::npos)
+                    {
+                        clients_info.erase(clients_info.begin() + i);
+                    }
+                }
+
+                for (auto client : clients)
+                {
+                    if (client.second.find("BACKUP") != std::string::npos)
+                    {
+                        clients.erase(client.first);
+                    }
+                }
+                
                 thread connecting_to_clients(&Server::connect_clients, this);
                 connecting_to_clients.join();
 
@@ -187,17 +204,20 @@ void Server::connect_server(string main_ip_address, string main_port)
 //     return;
 // }
 
-void Server::connect_clients(){
-    
+void Server::connect_clients()
+{
+
     // servidor vai atrás dos clientes no clients_info
     // connect pra cada um deles
     // abre todas as threads pra cada um deles
 
     std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
 
-    for (auto client : clients_info) {
+    for (auto client : clients_info)
+    {
 
-        if(client.username == "BACKUP"){
+        if (client.username == "BACKUP")
+        {
             continue;
         }
 
@@ -209,7 +229,7 @@ void Server::connect_clients(){
             cout << "Erro ao criar socket" << endl;
             return;
         }
-        
+
         // Tenta conectar ao servidor por 100 segundos
         int attempts = 0;
         while (attempts < 10)
@@ -225,7 +245,7 @@ void Server::connect_clients(){
                 sleep(1); // Aguarda 1 segundo antes de tentar novamente
                 attempts++;
             }
-        }     
+        }
     }
 }
 
@@ -410,8 +430,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     }
                     std::cout << "enviando para o backup" << std::endl;
 
-                    // TODO: enviar para o próximo backup também, no momento manda só pra UM backup e não para todos os backups
-
                     vector<int> backup_sockets = getUserSockets("BACKUP");
 
                     for (auto socket : backup_sockets)
@@ -572,6 +590,7 @@ void Server::handle_communication(int client_sock)
         // Cria a pasta do cliente no servidor para sincronização
         // ===================================================================
         create_sync_dir(client_sock);
+
         // ===================================================================
 
         // cria as threds
@@ -697,8 +716,15 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
 void Server::create_sync_dir(int client_fd)
 {
     std::string username = getUsername(client_fd);
-    std::string dir_path = "sync_dir_" + username;
-    FileInfo::create_dir(dir_path);
+    if (username.find("BACKUP") == std::string::npos)
+    {
+        std::string dir_path = "sync_dir_" + username;
+        FileInfo::create_dir(dir_path);
+    }
+    else
+    {
+        return;
+    }
 }
 
 void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
@@ -762,6 +788,10 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 char client_ip[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
                 std::cout << "SOCK: " << client.sock << " USERNAME: " << client.username << " ADDRESS: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
+                add_client_mutex.lock();
+                addClient(client.sock, client.username);
+                add_client_mutex.unlock();
+                create_sync_dir(client.sock);
             }
         }
     }

@@ -51,6 +51,8 @@ public:
     void set_payload_size(uint16_t payload_s);
     void set_payload(const std::vector<char> &payload_content);
     void clean_payload();
+
+    static Packet create_user_packet(const std::string &username, int type);
 };
 
 #endif // PACKET_H
