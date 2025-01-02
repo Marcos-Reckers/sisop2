@@ -7,6 +7,7 @@ INCLUDE_DIR = include
 CLIENT_BUILD_DIR = $(BUILD_DIR)/client
 SERVER_BUILD_DIR = $(BUILD_DIR)/server
 TEST_BUILD_DIR = $(BUILD_DIR)/test
+TEST2_BUILD_DIR = $(BUILD_DIR)/test2
 
 ########################################
 #   ARQUIVOS
@@ -46,9 +47,11 @@ release: compile
 debug: CXXFLAGS += $(_CXXFLAGS_DEBUG)
 debug: compile
 
-compile: $(BUILD_DIR) $(SERVER_BUILD_DIR) $(CLIENT_BUILD_DIR) $(TEST_BUILD_DIR) $(SERVER_NAME) $(CLIENT_NAME)
+compile: $(BUILD_DIR) $(SERVER_BUILD_DIR) $(CLIENT_BUILD_DIR) $(TEST_BUILD_DIR) $(TEST2_BUILD_DIR) $(SERVER_NAME) $(CLIENT_NAME)
 	cp $(CLIENT_NAME) $(TEST_BUILD_DIR)/myClient
 	cp $(SERVER_NAME) $(TEST_BUILD_DIR)/server
+	cp $(CLIENT_NAME) $(TEST2_BUILD_DIR)/myClient
+	cp $(SERVER_NAME) $(TEST2_BUILD_DIR)/server
 
 # Compilar o servidor
 $(SERVER_NAME): $(SERVER_SRC)
@@ -73,6 +76,9 @@ $(CLIENT_BUILD_DIR):
 
 $(TEST_BUILD_DIR):
 	@mkdir -p $(TEST_BUILD_DIR)
+
+$(TEST2_BUILD_DIR):
+	@mkdir -p $(TEST2_BUILD_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)/*

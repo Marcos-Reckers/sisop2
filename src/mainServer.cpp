@@ -41,6 +41,7 @@ int main(int argc, char const *argv[])
     {
         string main_ip_address = argv[3];
         string main_port = argv[4];
+        server.backup_name = argv[5];
         std::cout << "Connecting to main server: " << main_ip_address << " | port: " << main_port << std::endl;
 
         std::thread server_thread([&server, main_ip_address, main_port]()

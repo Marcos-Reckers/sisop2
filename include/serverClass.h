@@ -27,7 +27,12 @@ private:
 
     vector<int> ports;
 
+    string bully_number;
+
 public:
+
+    std::string backup_name;
+
     // Construtor que inicializa o servidor com uma porta específica
     explicit Server(int port, string type);
 
@@ -65,6 +70,8 @@ public:
 
     string create_string_from_client_info(vector<ClientInfo> &clients_info);
 
+    void bully();
+    int connect_backup_servers();
 
     // Getters
     int getServerFd() const;
