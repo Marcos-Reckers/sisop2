@@ -138,10 +138,8 @@ void Server::connect_server(string main_ip_address, string main_port)
     while (attempts < 10)
     {
         std::cout << "Dentro do while connect_server" << endl;
-        std::cout << "AQUI O PRINTEI PRINTA CARALHO" << endl;
         if (connect(curr_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
         {
-            std::cout << "AGR ESTOU DENTRO DO IF DO CONNECT" << endl;
             std::string username_with_null = this->backup_name;
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
             int recebido = 0;
@@ -151,6 +149,12 @@ void Server::connect_server(string main_ip_address, string main_port)
             {  
                 std::cout << "VENDO SE O OK CHEGOUUUUUU" << std::endl;
                 recebido = recv(curr_sock, buffer, 256, 0);
+            }
+
+            cout << "recebido: "  << endl;
+            for (auto c : buffer)
+            {
+                std::cout << c;
             }
             
             if (strcmp(buffer, "ok") == 0)
