@@ -177,8 +177,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                 // se nao for o lider, cria uma nova conexao com o lider, e cria um novo heartbeat com o lider
                 // se for o lider, faz o q está aqui em baixo.
 
-                // TODO: LEMBRAR QUE TEM QUE REMOVER DO CLIENTS_INFO E DO CLIENTS
-                //  LEMBRAR QUE SO PODE REMOVER ELE PROPRIO E NAO TODOS BACKUPS
+                // seg fault aqui
 
                 for (size_t i = 0; i < clients_info.size(); i++)
                 {
@@ -902,7 +901,7 @@ void Server::close_connection(int client_sock)
 
 int Server::connect_backup_servers()
 {
-    int tentativas = 10;
+    int tentativas = 20;
     for (int i = 0; i < tentativas; i++)
     {
         sockaddr_in backup_addr;
@@ -976,12 +975,6 @@ void Server::bully()
 
             std::cout << "EU SOU O LIDER" << std::endl;
 
-            // Set receive timeout
-            // struct timeval tv;
-            // tv.tv_sec = 5000; // 5 seconds timeout
-            // tv.tv_usec = 0;
-            // setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
-
             std::cout << "SLEEP POR 5 SEGUNDOS DO BACKUP BULLY INFO EMPTY" << std::endl;
             sleep(5);
 
@@ -1021,15 +1014,26 @@ void Server::bully()
                     std::string message = election + this->bully_number;
                     std::cout << "ENVIANDO: " << message << std::endl;
 
-                    int sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
-                    
-                    send(sock, &message, message.size(), 0);
+                    int tentativas = 20;
+                    int sock;
 
-                    // // Set receive timeout
-                    // struct timeval tv;
-                    // tv.tv_sec = 5000; // 5 seconds timeout
-                    // tv.tv_usec = 0;
-                    // setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+                    for (int i = 0; i < tentativas; i++)
+                    {
+                        sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
+                        if (sock != -1) // Check if connection is successful
+                        {
+                            break; // Exit the loop if connection is successful
+                        }
+                        else if (i == tentativas - 1) // If it's the last attempt and still failed
+                        {
+                            // Handle the failure case, e.g., log an error, throw an exception, etc.
+                            // For example:
+                            std::cerr << "Failed to connect after " << tentativas << " attempts." << std::endl;
+                            // Optionally, you can throw an exception or handle the error as needed
+                        }
+                    }
+
+                    send(sock, &message, message.size(), 0);
 
                     std::cout << "SLEEP POR 5 SEGUNDOS" << std::endl;
                     sleep(5);
