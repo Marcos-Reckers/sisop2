@@ -910,6 +910,8 @@ int Server::connect_backup_servers()
         // Aceita a conexão do cliente
         int backup_fd = accept(server_fd, (struct sockaddr *)&backup_addr, &backup_addr_len);
 
+        std::cout << "BACKUP FD: " << backup_fd << std::endl;
+
         if (backup_fd >= 0)
         {
             std::cout << "Conexão aceita" << std::endl;
@@ -1033,9 +1035,9 @@ void Server::bully()
                             // Optionally, you can throw an exception or handle the error as needed
                         }
 
+                        std::cout << "Tentando conectar com o backup, tentativa: " << i << std::endl;
+                        std::cout << "A SOCK É: " << sock << std::endl;
                         sleep(1);
-
-                        std::cout << "Tentando conectar com o backup, tentativa: " << tentativas << std::endl;
                     }
 
                     send(sock, &message, message.size(), 0);
