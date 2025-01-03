@@ -1179,7 +1179,7 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
 
 int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 {
-    int port = 8081;
+    int port = 8080;
     std::cout << "ESPERANDO CONEXÃO DO BACKUP" << std::endl;
 
     int new_sock = socket(AF_INET, SOCK_STREAM, 0);
