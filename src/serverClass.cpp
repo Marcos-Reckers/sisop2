@@ -76,10 +76,13 @@ void Server::acceptClients()
                 send(client_fd, "exit", 4, 0);
                 continue;
             }
-            else
-            {
-                send(client_fd, "ok", 2, 0);
-            }
+            // else
+            // {
+            //    
+            // }
+
+            cout<< "MANDANDO OK PARA: " << username_str <<endl;
+            send(client_fd, "ok", 2, 0);
 
             add_client_mutex.lock();
 
@@ -596,7 +599,14 @@ void Server::handle_communication(int client_sock)
 
         // Cria a pasta do cliente no servidor para sincronização
         // ===================================================================
-        create_sync_dir(client_sock);
+        if (getUsername(client_sock).find("BACKUP") == std::string::npos)
+        {
+            create_sync_dir(client_sock);
+        }
+        else
+        {
+            cout << "Cliente é um backup" << endl;
+        }
 
         // ===================================================================
 
@@ -633,6 +643,8 @@ void Server::handle_communication(int client_sock)
         io_thread.join();
         command_thread.join();
         sync_thread.join();
+
+        std::cout << "DEI JOIN EM TODAS THREADS" << std::endl;
 
         return;
     }
@@ -798,7 +810,10 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 add_client_mutex.lock();
                 addClient(client.sock, client.username);
                 add_client_mutex.unlock();
-                create_sync_dir(client.sock);
+                if (getUsername(client_sock).find("BACKUP") == std::string::npos)
+                {
+                    create_sync_dir(client_sock);
+                }
             }
         }
     }
@@ -968,7 +983,7 @@ void Server::bully()
                 std::cout << "Timeout or error receiving data on bigger" << std::endl;
                 break;
             }
-            
+
             return;
         }
 

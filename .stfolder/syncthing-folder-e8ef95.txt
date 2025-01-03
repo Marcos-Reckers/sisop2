@@ -1,0 +1,5 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: islk2-g9lyr
+created: 2025-01-03T11:45:18-03:00
