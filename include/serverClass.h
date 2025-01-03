@@ -71,6 +71,13 @@ public:
     string create_string_from_client_info(vector<ClientInfo> &clients_info);
 
     void bully();
+    void election(map<int, sockaddr_in> backup_bully_info);
+
+    void answer(int backup_sock);
+    int connect_to_backup(sockaddr_in &backup_addr);
+    int wait_connect_from_backup(sockaddr_in &backup_addr);
+
+
     int connect_backup_servers();
 
     // Getters
