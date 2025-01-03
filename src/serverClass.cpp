@@ -5,6 +5,8 @@ std::mutex send_packets_mutex;
 std::mutex recive_packets_mutex;
 std::mutex add_client_mutex;
 
+std::mutex bully_mutex;
+
 // Construtor da classe que recebe a porta e tipo como argumento
 Server::Server(int port, string type) : server_fd(-1), type(type), port(port)
 {
@@ -1013,6 +1015,8 @@ void Server::bully()
                     int sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
                     send(sock, &message, message.size(), 0);
 
+                    bully_mutex.lock();
+
                     // Set receive timeout
                     struct timeval tv;
                     tv.tv_sec = 5000; // 5 seconds timeout
@@ -1030,6 +1034,8 @@ void Server::bully()
                         std::cout << "Timeout or error receiving data ON SMALL" << std::endl;
                         break;
                     }
+
+                    bully_mutex.unlock();
                 }
             }
         }
