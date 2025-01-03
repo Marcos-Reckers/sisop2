@@ -1080,7 +1080,7 @@ int Server::connect_backup_servers()
 
 void Server::bully()
 {
-
+    std::cout << "ENTREI NO BULLY" << std::endl;
     // map entre addr e bully_number de backup;
     std::map<int, sockaddr_in> backup_bully_info;
 
@@ -1108,6 +1108,9 @@ void Server::bully()
             }
         }
     }
+    
+    election(backup_bully_info);
+
 }
 
 void Server::election(std::map<int, sockaddr_in> backup_bully_info)
@@ -1116,6 +1119,8 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
     {
         std::cout << "backup_bully_info vazio deu pau" << std::endl;
     }
+
+    std::cout << "loop election" << std::endl;
 
     for (auto backup : backup_bully_info)
     {
