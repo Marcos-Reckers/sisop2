@@ -76,13 +76,11 @@ void Server::acceptClients()
                 send(client_fd, "exit", 4, 0);
                 continue;
             }
-            // else
-            // {
-            //    
-            // }
-
-            cout<< "MANDANDO OK PARA: " << username_str <<endl;
-            send(client_fd, "ok", 2, 0);
+            else
+            {
+                cout<< "MANDANDO OK PARA: " << username_str <<endl;
+                send(client_fd, "ok", 2, 0);
+            }
 
             add_client_mutex.lock();
 
@@ -142,10 +140,14 @@ void Server::connect_server(string main_ip_address, string main_port)
         {
             std::string username_with_null = this->backup_name;
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
-
+            int recebido = 0;
             char buffer[256];
-            recv(curr_sock, buffer, 256, 0);
-
+            
+            while (recebido == 0)
+            {
+                recebido = recv(curr_sock, buffer, 256, 0);
+            }
+            
             if (strcmp(buffer, "ok") == 0)
             {
                 std::cout << "Conexão estabelecida com o servidor principal" << endl;
