@@ -80,10 +80,10 @@ void Server::acceptClients()
             }
             else
             {
-                std::cout << "ENTREI NO ELSE MAS N MANDEI OK AQUI PQ TA FORA " << std::endl;   
+                std::cout << "ENTREI NO ELSE MAS N MANDEI OK AQUI PQ TA FORA " << std::endl;
             }
 
-            cout<< "MANDANDO OK PARA: " << username_str <<endl;
+            cout << "MANDANDO OK PARA: " << username_str << endl;
             send(client_fd, "ok", 2, 0);
 
             add_client_mutex.lock();
@@ -146,19 +146,19 @@ void Server::connect_server(string main_ip_address, string main_port)
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
             int recebido = 0;
             char buffer[3];
-            
+
             while (recebido == 0)
-            {  
+            {
                 std::cout << "VENDO SE O OK CHEGOUUUUUU" << std::endl;
                 recebido = recv(curr_sock, buffer, 3, 0);
             }
 
-            cout << "recebido: "  << endl;
+            cout << "recebido: " << endl;
             for (auto c : buffer)
             {
                 std::cout << c;
             }
-            
+
             if (strcmp(buffer, "ok") == 0)
             {
                 std::cout << "Conexão estabelecida com o servidor principal" << endl;
@@ -977,7 +977,6 @@ void Server::bully()
             std::cout << "EU SOU O LIDER" << std::endl;
             this->type = "-p";
 
-            int sock = connect_backup_servers();
             // Set receive timeout
             // struct timeval tv;
             // tv.tv_sec = 5000; // 5 seconds timeout
@@ -986,6 +985,9 @@ void Server::bully()
 
             std::cout << "SLEEP POR 5 SEGUNDOS DO BACKUP BULLY INFO EMPTY" << std::endl;
             sleep(5);
+
+            std::cout << "CONECTANDO COM OS BACKUP SERVERS" << std::endl;
+            int sock = connect_backup_servers();
 
             std::cout << "SAI DO SLEEP DO BACKUP BULLY INFO EMPTY" << std::endl;
 
