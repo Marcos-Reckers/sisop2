@@ -979,10 +979,15 @@ void Server::bully()
 
             int sock = connect_backup_servers();
             // Set receive timeout
-            struct timeval tv;
-            tv.tv_sec = 5000; // 5 seconds timeout
-            tv.tv_usec = 0;
-            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+            // struct timeval tv;
+            // tv.tv_sec = 5000; // 5 seconds timeout
+            // tv.tv_usec = 0;
+            // setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+
+            std::cout << "SLEEP POR 5 SEGUNDOS DO BACKUP BULLY INFO EMPTY" << std::endl;
+            sleep(5);
+
+            std::cout << "SAI DO SLEEP DO BACKUP BULLY INFO EMPTY" << std::endl;
 
             int recv_len = recv(sock, buffer, sizeof(buffer), 0);
             if (recv_len > 0)
@@ -996,6 +1001,8 @@ void Server::bully()
                 std::cout << "Timeout or error receiving data on bigger" << std::endl;
                 break;
             }
+
+            std::cout << "SAI DO SLEEP DO BACKUP BULLY INFO EMPTY E RECEBI!" << std::endl;
 
             return;
         }
@@ -1015,13 +1022,16 @@ void Server::bully()
                     int sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
                     send(sock, &message, message.size(), 0);
 
-                    bully_mutex.lock();
+                    // // Set receive timeout
+                    // struct timeval tv;
+                    // tv.tv_sec = 5000; // 5 seconds timeout
+                    // tv.tv_usec = 0;
+                    // setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
 
-                    // Set receive timeout
-                    struct timeval tv;
-                    tv.tv_sec = 5000; // 5 seconds timeout
-                    tv.tv_usec = 0;
-                    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+                    std::cout << "SLEEP POR 5 SEGUNDOS" << std::endl;
+                    sleep(5);
+
+                    std::cout << "SAI DO SLEEP" << std::endl;
 
                     int recv_len = recv(sock, buffer, sizeof(buffer), 0);
                     if (recv_len > 0)
@@ -1035,7 +1045,7 @@ void Server::bully()
                         break;
                     }
 
-                    bully_mutex.unlock();
+                    std::cout << "SAI DO SLEEP E RECEBI!" << std::endl;
                 }
             }
         }
