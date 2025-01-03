@@ -78,9 +78,11 @@ void Server::acceptClients()
             }
             else
             {
-                cout<< "MANDANDO OK PARA: " << username_str <<endl;
-                send(client_fd, "ok", 2, 0);
+                std::cout << "ENTREI NO ELSE MAS N MANDEI OK AQUI PQ TA FORA " << std::endl;   
             }
+
+            cout<< "MANDANDO OK PARA: " << username_str <<endl;
+            send(client_fd, "ok", 2, 0);
 
             add_client_mutex.lock();
 
@@ -144,7 +146,8 @@ void Server::connect_server(string main_ip_address, string main_port)
             char buffer[256];
             
             while (recebido == 0)
-            {
+            {  
+                std::cout << "VENDO SE O OK CHEGOUUUUUU" << std::endl;
                 recebido = recv(curr_sock, buffer, 256, 0);
             }
             

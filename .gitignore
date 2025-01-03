@@ -1,9 +1,7 @@
 # Pastas de build
-build/
 dist/
 out/
-bin/
-obj/
+
 
 # Configurações do Visual Studio Code
 .vscode/
