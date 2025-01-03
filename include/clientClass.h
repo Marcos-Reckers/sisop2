@@ -14,7 +14,7 @@ private:
     struct hostent *server;
     string server_port;
     int sock;
-    vector<int> ports;
+    int port;
     std::vector<std::thread> active_threads;
     bool running;
     sockaddr_in client_addr;  

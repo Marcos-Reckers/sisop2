@@ -242,7 +242,7 @@ void Server::connect_clients()
             continue;
         }
 
-        client.addr.sin_port = htons(atoi("8081"));
+        client.addr.sin_port = htons(atoi("8080"));
 
         int curr_sock = socket(AF_INET, SOCK_STREAM, 0);
         if (curr_sock < 0)

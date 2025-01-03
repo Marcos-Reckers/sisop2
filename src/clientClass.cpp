@@ -102,7 +102,7 @@ void Client::handle_connection()
 
 void Client::wait_connection()
 {
-    ports = {atoi(server_port.c_str()) + 1, atoi(server_port.c_str()) + 2, atoi(server_port.c_str()) + 3};
+    port = atoi(server_port.c_str());
     std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
 
     int new_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -124,19 +124,15 @@ void Client::wait_connection()
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
 
-    for (size_t i = 0; i < ports.size(); i++)
-    {
-        client_addr.sin_port = htons(ports[i]);
+    client_addr.sin_port = htons(port);
 
-        if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
-        {
-            std::cerr << "Erro ao fazer o bind na porta " << htons(ports[i]) << "." << std::endl;
-        }
-        else
-        {
-            std::cout << "Bind realizado com sucesso na porta: " << ports[i] << std::endl;
-            break;
-        }
+    if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
+    {
+        std::cerr << "Erro ao fazer o bind na porta " << htons(port) << "." << std::endl;
+    }
+    else
+    {
+        std::cout << "Bind realizado com sucesso na porta: " << port << std::endl;
     }
 
     if (listen(new_sock, 1) < 0)
@@ -149,9 +145,7 @@ void Client::wait_connection()
     sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
     this->sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
-    //this->running = true;
-    
-
+    // this->running = true;
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
 }
@@ -627,21 +621,27 @@ void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vect
     return;
 }
 
-bool Client::is_socket_open() {
+bool Client::is_socket_open()
+{
     char buffer;
-    
+
     int result = recv(this->sock, &buffer, 1, MSG_PEEK);
     std::cout << "bom dia oq eu li do sock eh: " << result << std::endl;
 
-    if (result == 0) {
+    if (result == 0)
+    {
         // Socket closed by the peer
         return false;
-    } else if (result < 0) {
-        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+    }
+    else if (result < 0)
+    {
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+        {
             // No data available, but the socket is still open
             return true;
-            
-        } else {
+        }
+        else
+        {
             // Other errors indicate the socket might be closed
             perror("recv");
             return false;
@@ -659,7 +659,7 @@ void Client::heartbeat()
         if (!this->is_socket_open())
         {
             std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
-            //this->running = false;
+            // this->running = false;
             wait_connection();
             return;
         }
