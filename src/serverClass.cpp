@@ -975,7 +975,6 @@ void Server::bully()
             // send answer
 
             std::cout << "EU SOU O LIDER" << std::endl;
-            this->type = "-p";
 
             // Set receive timeout
             // struct timeval tv;
@@ -1006,6 +1005,7 @@ void Server::bully()
 
             std::cout << "SAI DO SLEEP DO BACKUP BULLY INFO EMPTY E RECEBI!" << std::endl;
 
+            this->type = "-p";
             return;
         }
 
@@ -1022,6 +1022,7 @@ void Server::bully()
                     std::cout << "ENVIANDO: " << message << std::endl;
 
                     int sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
+                    
                     send(sock, &message, message.size(), 0);
 
                     // // Set receive timeout
