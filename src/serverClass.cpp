@@ -1012,16 +1012,22 @@ void Server::bully()
 
                 if (stoi(this->bully_number) < std::get<1>(backup))
                 {
-                    im_bigger = false;
                     std::string message = election + this->bully_number;
                     std::cout << "ENVIANDO: " << message << std::endl;
+
+                    int curr_sock_bully = socket(AF_INET, SOCK_STREAM, 0);
+                    if (curr_sock_bully < 0)
+                    {
+                        std::cout << "Erro ao criar socket" << endl;
+                        return;
+                    }
 
                     int tentativas = 20;
                     int sock;
 
                     for (int i = 0; i < tentativas; i++)
                     {
-                        sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
+                        sock = connect(curr_sock_bully, (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
                         if (sock != -1) // Check if connection is successful
                         {
                             std::cout << "CONECTOUUUUUUUUUUUUUUUUUUUUUU" << std::endl;
@@ -1067,7 +1073,7 @@ void Server::bully()
 
         std::cout << "SLEEP POR 5 SEGUNDOS ANTES DE SAIR" << std::endl;
         sleep(5);
-        
+
         return;
     }
 }
