@@ -1152,9 +1152,9 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
         return -1;
     }
 
-    // backup_addr.sin_family = AF_INET;
-    // backup_addr.sin_port = htons(atoi("8081"));
-    // bzero(&(backup_addr.sin_zero), 8);
+    backup_addr.sin_family = AF_INET;
+    backup_addr.sin_port = htons(atoi("8081"));
+    bzero(&(backup_addr.sin_zero), 8);
 
     // Tenta conectar ao servidor por 100 segundos
     int attempts = 0;
@@ -1179,6 +1179,7 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
 
 int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 {
+    port = 8080;
     std::cout << "ESPERANDO CONEXÃO DO BACKUP" << std::endl;
 
     int new_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -1196,11 +1197,10 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         return -2;
     }
 
-    // memset(&backup_addr, 0, sizeof(backup_addr));
-    // backup_addr.sin_family = AF_INET;
-    // backup_addr.sin_addr.s_addr = INADDR_ANY;
-
-    // backup_addr.sin_port = htons(port);
+    memset(&backup_addr, 0, sizeof(backup_addr));
+    backup_addr.sin_family = AF_INET;
+    backup_addr.sin_addr.s_addr = INADDR_ANY;
+    backup_addr.sin_port = htons(port);
 
     if (bind(new_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) < 0)
     {
