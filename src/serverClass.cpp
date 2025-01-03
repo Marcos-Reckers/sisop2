@@ -1220,10 +1220,23 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 
     sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
-    int bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
-    // this->running = true;
+    int bully_sock=-1;
 
-    std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
+    while (true)
+    {
+        bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
+        if (bully_sock >= 0)
+        {
+            std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
+            break;
+        }
+        else
+        {
+            std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao aceitar conexão. Tentando novamente..." << std::endl;
+            sleep(1); // Aguarda 1 segundo antes de tentar novamente
+        }
+    }
+
     return bully_sock;
 }
 
