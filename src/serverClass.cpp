@@ -143,12 +143,12 @@ void Server::connect_server(string main_ip_address, string main_port)
             std::string username_with_null = this->backup_name;
             send(curr_sock, username_with_null.c_str(), username_with_null.size(), 0);
             int recebido = 0;
-            char buffer[256];
+            char buffer[3];
             
             while (recebido == 0)
             {  
                 std::cout << "VENDO SE O OK CHEGOUUUUUU" << std::endl;
-                recebido = recv(curr_sock, buffer, 256, 0);
+                recebido = recv(curr_sock, buffer, 3, 0);
             }
 
             cout << "recebido: "  << endl;
