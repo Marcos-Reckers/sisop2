@@ -1179,7 +1179,6 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
 
 int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 {
-    int port = 8080;
     std::cout << "ESPERANDO CONEXÃO DO BACKUP" << std::endl;
 
     int new_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -1197,15 +1196,15 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         return -2;
     }
 
-    memset(&backup_addr, 0, sizeof(backup_addr));
-    backup_addr.sin_family = AF_INET;
-    backup_addr.sin_addr.s_addr = INADDR_ANY;
+    // memset(&backup_addr, 0, sizeof(backup_addr));
+    // backup_addr.sin_family = AF_INET;
+    // backup_addr.sin_addr.s_addr = INADDR_ANY;
 
-    backup_addr.sin_port = htons(port);
+    // backup_addr.sin_port = htons(port);
 
     if (bind(new_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) < 0)
     {
-        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao fazer o bind na porta: " << htons(port) << "." << std::endl;
+        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao fazer o bind na porta: " << backup_addr.sin_port << "." << std::endl;
     }
     else
     {
