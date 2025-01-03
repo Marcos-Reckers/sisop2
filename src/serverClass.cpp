@@ -1022,6 +1022,7 @@ void Server::bully()
                         sock = connect(std::get<1>(backup), (struct sockaddr *)&std::get<0>(backup), sizeof(std::get<0>(backup)));
                         if (sock != -1) // Check if connection is successful
                         {
+                            std::cout << "CONECTOUUUUUUUUUUUUUUUUUUUUUU" << std::endl;
                             break; // Exit the loop if connection is successful
                         }
                         else if (i == tentativas - 1) // If it's the last attempt and still failed
@@ -1031,6 +1032,10 @@ void Server::bully()
                             std::cerr << "Failed to connect after " << tentativas << " attempts." << std::endl;
                             // Optionally, you can throw an exception or handle the error as needed
                         }
+
+                        sleep(1);
+
+                        std::cout << "Tentando conectar com o backup, tentativa: " << tentativas << std::endl;
                     }
 
                     send(sock, &message, message.size(), 0);
@@ -1057,6 +1062,10 @@ void Server::bully()
             }
         }
         std::cout << "continuo sendo um betinha backup" << std::endl;
+
+        std::cout << "SLEEP POR 5 SEGUNDOS ANTES DE SAIR" << std::endl;
+        sleep(5);
+        
         return;
     }
 }
