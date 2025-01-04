@@ -176,7 +176,6 @@ void Server::connect_server(string main_ip_address, string main_port)
                 thread backup_communication(&Server::handle_communication, this, bully_curr_sock);
 
                 maintain_connection.join();
-                backup_communication.join();
 
                 bully_mutex.lock();
 
@@ -217,13 +216,15 @@ void Server::connect_server(string main_ip_address, string main_port)
                 //     // }
                 // }
 
+                backup_communication.join();
+
                 std::cout << "DPS DOS FOR" << std::endl;
 
                 if (this->type == "-b")
                 {
                     std::cout << "Sou um backup" << endl;
                 }
-                
+
                 else
                 {
                     std::cout << "Sou um servidor principal" << endl;
@@ -521,8 +522,27 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 sem_post(active[username].get());
             }
 
-            std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
             removeClient(client_sock);
+            
+            if(this->type == "-p")
+            {
+                std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
+
+                string packet_string = create_string_from_client_info(clients_info);
+                std::cout << "Enviando informações do cliente APÓS REMOVER: " << packet_string << std::endl;
+
+                auto packet_client_info = FileInfo::create_packet_vector(packet_string);
+                send_queue.produce(packet_client_info);
+                std::cout << "Pacote criado do client_info e enviado pra fila" << std::endl;
+
+                std::cout << "Printando o pacote do client_info" << std::endl;
+                for (auto pkt : packet_client_info)
+                {
+                    pkt.print();
+                }
+            }
+
+            
 
             // aqui esta o perigo
             // clients_info.erase(std::remove_if(clients_info.begin(), clients_info.end(), [client_sock](ClientInfo &client_info)
@@ -530,18 +550,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             //                    clients_info.end());
 
             // ClientInfo *client = find_client_info(clients_info, client_sock);
-            string packet_string = create_string_from_client_info(clients_info);
-            std::cout << "Enviando informações do cliente APÓS REMOVER: " << packet_string << std::endl;
-
-            auto packet_client_info = FileInfo::create_packet_vector(packet_string);
-            send_queue.produce(packet_client_info);
-            std::cout << "Pacote criado do client_info e enviado pra fila" << std::endl;
-
-            std::cout << "Printando o pacote do client_info" << std::endl;
-            for (auto pkt : packet_client_info)
-            {
-                pkt.print();
-            }
+            
 
             // for (auto client : clients_info)
             // {
