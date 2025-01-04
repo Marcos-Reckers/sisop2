@@ -145,7 +145,6 @@ void Server::connect_server(string main_ip_address, string main_port)
 
             while (recebido == 0)
             {
-                std::cout << "VENDO SE O OK CHEGOUUUUUU" << std::endl;
                 recebido = recv(bully_curr_sock, buffer, 3, 0);
             }
 
@@ -171,41 +170,6 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 bully_mutex.unlock();
 
-                std::cout << "SAI DO BULLY" << std::endl;
-
-                // for (auto client_info : clients_info)
-                // {
-                //     std::cout << "client_info: " << client_info.username << std::endl;
-                // }
-
-                // for (size_t i = 0; i < clients_info.size(); i++)
-                // {
-                //     // std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
-                //     if (clients_info[i].username.find(this->backup_name) != std::string::npos)
-                //     {
-                //         clients_info.erase(clients_info.begin() + i);
-                //     }
-                // }
-
-                std::cout << "antes do segundo for" << std::endl;
-
-                // for (auto client : clients)
-                // {
-                //     cout << "client: " << client.second << endl;
-                // }
-
-                // for (auto client : clients)
-                // {
-                //     cout << "removendo client: " << client.second << endl;
-
-                //     // if (client.second.find(this->backup_name) != std::string::npos)
-                //     // {
-                //     //     clients.erase(client.first);
-                //     // }
-                // }
-
-                std::cout << "DPS DOS FOR" << std::endl;
-
                 if (this->type == "-b")
                 {
                     std::cout << "Sou um backup" << endl;
@@ -217,6 +181,16 @@ void Server::connect_server(string main_ip_address, string main_port)
                 {
                     std::cout << "Sou um servidor principal" << endl;
 
+                    clients_info.erase(std::remove_if(
+                        clients_info.begin(), clients_info.end(), [this](const ClientInfo& client) {
+                            return client.username == this->backup_name;
+                        }), clients_info.end());
+
+                    for(auto client : clients_info)
+                    {
+                        std::cout << "client_info: " << client.username << std::endl;
+                    }
+                    
                     thread connecting_to_clients(&Server::connect_clients, this);
                     connecting_to_clients.join();
                 }
@@ -299,8 +273,6 @@ void Server::connect_clients()
                             break;
                         }
                     }
-
-                    std::cout << "NOVO: meu username eh: " << client.username << " sock: " << client.sock << " addr: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
 
                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
 
@@ -1031,30 +1003,17 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
         std::cout << "backup_bully_info vazio deu pau" << std::endl;
     }
 
-    std::cout << "loop election" << std::endl;
-
     for (auto backup : backup_bully_info)
     {
         if ((stoi(this->bully_number)) > backup.first)
         {
             // receive and accept
             ClientInfo new_info = wait_connect_from_backup(backup.second);
-            std::cout << "Sai do wait_connect_from_backup" << std::endl;
-            std::cout << "BULLY SOCK (fodao): " << new_info.sock << std::endl;
 
             this->type = "-p";
 
             for (auto &client_info : clients_info)
             {
-                // if (client_info.addr.sin_addr.s_addr == backup.second.sin_addr.s_addr)
-                // {
-                //     client_info.sock = bully_sock;
-                //     break;
-                // }
-
-                std::cout << "client info address: " << client_info.addr.sin_addr.s_addr << std::endl;
-                std::cout << "new_info address: " << new_info.addr.sin_addr.s_addr << std::endl;
-
                 if (client_info.addr.sin_addr.s_addr == new_info.addr.sin_addr.s_addr)
                 {
                     client_info.sock = new_info.sock;
@@ -1194,8 +1153,6 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
         if (bully_sock >= 0)
         {
-            std::cout << "server_addr do accept: " << inet_ntoa(server_addr.sin_addr) << std::endl;
-
             std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
             break;
         }
