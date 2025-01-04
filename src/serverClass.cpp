@@ -1062,6 +1062,10 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
                     }
                 }
             }
+            std::string buffer[3];
+            sleep(5);
+            recv(bully_sock, buffer, 3, 0);
+            std::cout << "recebi: " << buffer << std::endl;
         }
         else
         {
@@ -1071,6 +1075,10 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
 
             this->new_backup_sock = backup_sock;
+
+            std::cout << "MANDANDO OK!" << std::endl;
+            send(backup_sock, "ok", 3, 0);
+            std::cout << "MANDAdo OK!" << std::endl;
 
             // recv "ok"
         }
