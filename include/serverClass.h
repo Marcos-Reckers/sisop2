@@ -77,7 +77,7 @@ public:
 
     void answer(int backup_sock);
     int connect_to_backup(sockaddr_in &backup_addr);
-    int wait_connect_from_backup(sockaddr_in &backup_addr);
+    ClientInfo wait_connect_from_backup(sockaddr_in &backup_addr);
 
 
     int connect_backup_servers();

@@ -23,12 +23,10 @@ bool Server::start()
         return false;
     }
 
-
     // Configuração do endereço do servidor
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY; // Escuta em qualquer interface
     server_addr.sin_port = htons(port);
-
 
     // Bind do socket à porta
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
@@ -1032,17 +1030,26 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
         if ((stoi(this->bully_number)) > backup.first)
         {
             // receive and accept
-            int bully_sock = wait_connect_from_backup(backup.second);
+            ClientInfo new_info = wait_connect_from_backup(backup.second);
             std::cout << "Sai do wait_connect_from_backup" << std::endl;
-            std::cout << "BULLY SOCK (fodao): " << bully_sock << std::endl;
+            std::cout << "BULLY SOCK (fodao): " << new_info.sock << std::endl;
 
             this->type = "-p";
 
             for (auto &client_info : clients_info)
             {
-                if (client_info.addr.sin_addr.s_addr == backup.second.sin_addr.s_addr)
+                // if (client_info.addr.sin_addr.s_addr == backup.second.sin_addr.s_addr)
+                // {
+                //     client_info.sock = bully_sock;
+                //     break;
+                // }
+
+                std::cout << "client info address: " << client_info.addr.sin_addr.s_addr << std::endl;
+                std::cout << "new_info address: " << new_info.addr.sin_addr.s_addr << std::endl;
+
+                if (client_info.addr.sin_addr.s_addr == new_info.addr.sin_addr.s_addr)
                 {
-                    client_info.sock = bully_sock;
+                    client_info.sock = new_info.sock;
                     break;
                 }
 
@@ -1051,7 +1058,7 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
                     if (client.second == client_info.username)
                     {
                         clients.erase(client.first);
-                        clients[bully_sock] = client_info.username;
+                        clients[new_info.sock] = client_info.username;
                         break;
                     }
                 }
@@ -1059,7 +1066,7 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
 
             std::string buffer[3];
             sleep(5);
-            recv(bully_sock, buffer, 3, 0);
+            recv(new_info.sock, buffer, 3, 0);
             std::cout << "recebi: " << buffer << std::endl;
         }
         else
@@ -1111,6 +1118,7 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
         {
             cout << "DO BACKUP TENTANDO CONECTAR: Conectado ao backup!" << endl;
             std::cout << "A SOCK DO BACKUP EH: " << bully_curr_sock << std::endl;
+
             return bully_curr_sock;
         }
         else
@@ -1125,8 +1133,10 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
     return -3;
 }
 
-int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
+ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 {
+    ClientInfo tmp;
+    tmp.username = "ruim";
     port = 8080;
     std::cout << "ESPERANDO CONEXÃO DO BACKUP" << std::endl;
 
@@ -1134,7 +1144,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     if (new_sock == -1)
     {
         std::cerr << "Erro ao criar o socket DO BACKUP ESPERANDO CONEXÃO." << std::endl;
-        return -6;
+        return tmp;
     }
 
     int opt = 1;
@@ -1142,7 +1152,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     {
         std::cerr << "Erro ao configurar SO_REUSEADDR NO BACKUP ESPERANDO CONEXÃO." << std::endl;
         close(new_sock);
-        return -2;
+        return tmp;
     }
 
     memset(&backup_addr, 0, sizeof(backup_addr));
@@ -1163,7 +1173,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     {
         std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao colocar o servidor em modo de escuta." << std::endl;
         close(new_sock);
-        return -99;
+        return tmp;
     }
 
     sockaddr_in server_addr;
@@ -1177,6 +1187,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         if (bully_sock >= 0)
         {
             std::cout << "server_addr do accept: " << inet_ntoa(server_addr.sin_addr) << std::endl;
+
             std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
             break;
         }
@@ -1187,7 +1198,12 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         }
     }
 
-    return bully_sock;
+    ClientInfo client_info;
+    client_info.sock = bully_sock;
+    client_info.addr = server_addr;
+    client_info.username = "BACKUP";
+
+    return client_info;
 }
 
 // void Server::answer(int backup_sock)
