@@ -216,8 +216,6 @@ void Server::connect_server(string main_ip_address, string main_port)
                 //     // }
                 // }
 
-                backup_communication.join();
-
                 std::cout << "DPS DOS FOR" << std::endl;
 
                 if (this->type == "-b")
@@ -232,6 +230,8 @@ void Server::connect_server(string main_ip_address, string main_port)
                     thread connecting_to_clients(&Server::connect_clients, this);
                     connecting_to_clients.join();
                 }
+
+                backup_communication.join();
             }
 
             else
@@ -523,7 +523,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             }
 
             removeClient(client_sock);
-            
+
             if(this->type == "-p")
             {
                 std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
