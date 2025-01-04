@@ -829,9 +829,13 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 string file_name = FileInfo::receive_file(packets, folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
-                cout << "Arquivo pronto para envio via broadcast: " << file_path << endl;
-                auto pkts = FileInfo::create_packet_vector("upload_broadcast", file_path);
-                send_queue.produce(pkts);
+
+                if (this->type == "-p")
+                {
+                    auto pkts = FileInfo::create_packet_vector("upload_broadcast", file_path);
+                    cout << "Arquivo pronto para envio via broadcast: " << file_path << endl;
+                    send_queue.produce(pkts);
+                }
             }
             else if (cmd == "delete_sync")
             {
@@ -839,11 +843,15 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + folder_name + "/" + file_name;
                 cout << "Delete recebido para o arquvio: " << file_name << endl;
-                cout << "Enviando delete_broadcast: " << file_name << endl;
-                auto pkts = FileInfo::create_packet_vector("delete_broadcast", file_name);
-                send_queue.produce(pkts);
-                FileInfo::delete_file(file_path);
-                std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
+
+                if (this->type == "-p")
+                {
+                    cout << "Enviando delete_broadcast: " << file_name << endl;
+                    auto pkts = FileInfo::create_packet_vector("delete_broadcast", file_name);
+                    send_queue.produce(pkts);
+                    FileInfo::delete_file(file_path);
+                    std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
+                }
             }
         }
         if (packets[0].get_type() == 6)
