@@ -271,10 +271,15 @@ void Server::connect_clients()
 
     for (auto client : clients_info)
     {
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+        std::cout << "meu username eh: " << client.username << " sock: " << client.sock << " addr: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
+
         if (client.username == this->backup_name)
         {
             continue;
         }
+
         if (client.username.find("BACKUP") == std::string::npos)
         {
 
