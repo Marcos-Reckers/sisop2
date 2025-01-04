@@ -146,6 +146,7 @@ void Client::wait_connection()
     // this->running = true;
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
+    active_threads.emplace_back(&Client::heartbeat, this);
 }
 
 int16_t Client::connect_to_server()
@@ -615,28 +616,27 @@ bool Client::is_socket_open()
     char buffer;
 
     int result = recv(this->sock, &buffer, 1, MSG_PEEK);
-    std::cout << "bom dia oq eu li do sock eh: " << result << std::endl;
 
     if (result == 0)
     {
-        // Socket closed by the peer
+
         return false;
     }
     else if (result < 0)
     {
         if (errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            // No data available, but the socket is still open
+            
             return true;
         }
         else
         {
-            // Other errors indicate the socket might be closed
+
             perror("recv");
             return false;
         }
     }
-    // Data is available; socket is still open
+
     return true;
 }
 
