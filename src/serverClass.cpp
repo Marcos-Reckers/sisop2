@@ -122,7 +122,7 @@ void Server::acceptClients()
 
 void Server::connect_server(string main_ip_address, string main_port)
 {
-    //std::cout << "Entrei connect_server" << std::endl;
+    std::cout << "Entrei connect_server" << std::endl;
     struct sockaddr_in serv_addr;
     // Cria o socket
     int bully_curr_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -143,7 +143,7 @@ void Server::connect_server(string main_ip_address, string main_port)
     int attempts = 0;
     while (attempts < 10)
     {
-        //std::cout << "Dentro do while connect_server" << endl;
+        std::cout << "Dentro do while connect_server" << endl;
         if (connect(bully_curr_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
         {
             std::string username_with_null = this->backup_name;
@@ -186,14 +186,14 @@ void Server::connect_server(string main_ip_address, string main_port)
                 //     std::cout << "client_info: " << client_info.username << std::endl;
                 // }
 
-                for (size_t i = 0; i < clients_info.size(); i++)
-                {
-                    // std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
-                    if (clients_info[i].username.find(this->backup_name) != std::string::npos)
-                    {
-                        clients_info.erase(clients_info.begin() + i);
-                    }
-                }
+                // for (size_t i = 0; i < clients_info.size(); i++)
+                // {
+                //     // std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
+                //     if (clients_info[i].username.find(this->backup_name) != std::string::npos)
+                //     {
+                //         clients_info.erase(clients_info.begin() + i);
+                //     }
+                // }
 
                 std::cout << "antes do segundo for" << std::endl;
 
@@ -692,7 +692,7 @@ void Server::handle_communication(int client_sock)
         std::thread sync_thread([this, &client_sock, client_folder, &send_queue, &sync_queue]()
                                 { this->handle_sync(client_sock, client_folder, send_queue, sync_queue); });
 
-        if (getUsername(client_sock).find("BACKUP") == std::string::npos && !clients_info.empty())
+        if (getUsername(client_sock).find("BACKUP") == std::string::npos && !clients_info.empty() && this->type == "-p")
         {
 
             // ClientInfo *client = find_client_info(clients_info, client_sock);
@@ -710,13 +710,15 @@ void Server::handle_communication(int client_sock)
             }
         }
 
-        std::cout << "depois do if do cliente != backup" << std::endl;
+        // std::cout << "depois do if do cliente != backup" << std::endl;
+
+        std::cout << "ESTOU PARADO ESPERANDO" << std::endl;
 
         io_thread.join();
         command_thread.join();
         sync_thread.join();
 
-        std::cout << "DEI JOIN EM TODAS THREADS" << std::endl;
+        // std::cout << "DEI JOIN EM TODAS THREADS" << std::endl;
 
         return;
     }
@@ -1085,17 +1087,17 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
         return -1;
     }
 
-    std::cout << "ANTES DE MUDAR" << std::endl;
-    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
-    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
+    // std::cout << "ANTES DE MUDAR" << std::endl;
+    // std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
+    // std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
 
     backup_addr.sin_family = AF_INET;
     backup_addr.sin_port = htons(atoi("8080"));
     bzero(&(backup_addr.sin_zero), 8);
 
-    std::cout << "DPS DE MUDAR A PORTA PRA 8080" << std::endl;
-    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
-    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
+    // std::cout << "DPS DE MUDAR A PORTA PRA 8080" << std::endl;
+    // std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
+    // std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
 
     // Tenta conectar ao servidor por 100 segundos
     int attempts = 0;
@@ -1104,6 +1106,7 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
         if (connect(bully_curr_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) == 0)
         {
             cout << "DO BACKUP TENTANDO CONECTAR: Conectado ao backup!" << endl;
+            std::cout << "A SOCK DO BACKUP EH: " << bully_curr_sock << std::endl;
             return bully_curr_sock;
         }
         else
