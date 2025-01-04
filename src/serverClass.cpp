@@ -1152,9 +1152,17 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
         return -1;
     }
 
+    std::cout << "ANTES DE MUDAR" << std::endl;
+    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
+    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
+
     backup_addr.sin_family = AF_INET;
-    backup_addr.sin_port = htons(atoi("8081"));
+    backup_addr.sin_port = htons(atoi("8080"));
     bzero(&(backup_addr.sin_zero), 8);
+
+    std::cout << "DPS DE MUDAR A PORTA PRA 8080" << std::endl;
+    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
+    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
 
     // Tenta conectar ao servidor por 100 segundos
     int attempts = 0;
@@ -1224,6 +1232,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 
     while (true)
     {
+        std::cout << "tentando aceitar conexao: " << std::endl;
         bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
         if (bully_sock >= 0)
         {
