@@ -24,7 +24,7 @@ public:
     Client(string username, struct hostent *server, string server_port);
     void set_sock(int sock);
 
-    void wait_connection();
+    void wait_connection(int porta);
 
     void handle_connection();
     void send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue);

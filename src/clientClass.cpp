@@ -98,9 +98,8 @@ void Client::handle_connection()
     return;
 }
 
-void Client::wait_connection()
+void Client::wait_connection(int porta)
 {
-    port = 8080;
     std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
 
     int new_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -121,16 +120,16 @@ void Client::wait_connection()
     memset(&client_addr, 0, sizeof(client_addr));
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
-
-    client_addr.sin_port = htons(port);
+    client_addr.sin_port = htons(porta);
+    cout << "Porta: " << htons(porta) << endl;
 
     if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
     {
-        std::cerr << "Erro ao fazer o bind na porta " << htons(port) << "." << std::endl;
+        std::cerr << "Erro ao fazer o bind na porta " << htons(porta) << "." << std::endl;
     }
     else
     {
-        std::cout << "Bind realizado com sucesso na porta: " << port << std::endl;
+        std::cout << "Bind realizado com sucesso na porta: " << porta << std::endl;
     }
 
     if (listen(new_sock, 1) < 0)
@@ -649,7 +648,7 @@ void Client::heartbeat()
         {
             std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
             // this->running = false;
-            wait_connection();
+            wait_connection(8080);
             return;
         }
     }
