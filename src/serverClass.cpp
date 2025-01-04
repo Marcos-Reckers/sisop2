@@ -180,8 +180,14 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 std::cout << "SAI DO BULLY" << std::endl;
 
+                for (auto client_info : clients_info)
+                {   
+                    std::cout << "client_info: " << client_info.username << std::endl;
+                }
+
                 for (size_t i = 0; i < clients_info.size(); i++)
                 {
+                    std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
                     if (clients_info[i].username.find(this->backup_name) != std::string::npos)
                     {
                         clients_info.erase(clients_info.begin() + i);
@@ -199,10 +205,10 @@ void Server::connect_server(string main_ip_address, string main_port)
                 {
                     cout << "removendo client: " << client.second << endl;
 
-                    if (client.second.find(this->backup_name) != std::string::npos)
-                    {
-                        clients.erase(client.first);
-                    }
+                    // if (client.second.find(this->backup_name) != std::string::npos)
+                    // {
+                    //     clients.erase(client.first);
+                    // }
                 }
 
                 std::cout << "DPS DOS FOR" << std::endl;
@@ -502,6 +508,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
             removeClient(client_sock);
 
+            // aqui esta o perigo
             // clients_info.erase(std::remove_if(clients_info.begin(), clients_info.end(), [client_sock](ClientInfo &client_info)
             //                                   { return client_info.sock == client_sock; }),
             //                    clients_info.end());
