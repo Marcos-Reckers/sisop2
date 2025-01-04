@@ -173,9 +173,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                 if (this->type == "-b")
                 {
                     std::cout << "Sou um backup" << endl;
-                    thread maintain_connection(&Server::heartbeat, this, this->new_backup_sock);
                     std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
-                    maintain_connection.join();
                     betinha.join();
                 }
 
