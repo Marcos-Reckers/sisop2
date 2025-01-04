@@ -121,9 +121,9 @@ void Client::wait_connection(int porta)
     memset(&client_addr, 0, sizeof(client_addr));
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
-    client_addr.sin_port = htons(porta);
+    client_addr.sin_port = 8080;
     
-    std::cout << "Porta: " << htons(porta) << std::endl;
+    std::cout << "Porta: " << 8080 << std::endl;
 
     if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
     {
