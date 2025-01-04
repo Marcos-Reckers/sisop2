@@ -116,12 +116,14 @@ void Client::wait_connection(int porta)
         close(new_sock);
         return;
     }
+    std::cout << "antes de definir a porta"<< std::endl;
 
     memset(&client_addr, 0, sizeof(client_addr));
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
     client_addr.sin_port = htons(porta);
-    cout << "Porta: " << htons(porta) << endl;
+    
+    std::cout << "Porta: " << htons(porta) << std::endl;
 
     if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
     {
