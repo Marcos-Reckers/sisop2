@@ -86,10 +86,6 @@ void Server::acceptClients()
                 send(client_fd, "exit", 4, 0);
                 continue;
             }
-            else
-            {
-                std::cout << "ENTREI NO ELSE MAS N MANDEI OK AQUI PQ TA FORA " << std::endl;
-            }
 
             cout << "MANDANDO OK PARA: " << username_str << endl;
             send(client_fd, "ok", 2, 0);
@@ -126,7 +122,7 @@ void Server::acceptClients()
 
 void Server::connect_server(string main_ip_address, string main_port)
 {
-    std::cout << "Entrei connect_server" << std::endl;
+    //std::cout << "Entrei connect_server" << std::endl;
     struct sockaddr_in serv_addr;
     // Cria o socket
     int bully_curr_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -147,7 +143,7 @@ void Server::connect_server(string main_ip_address, string main_port)
     int attempts = 0;
     while (attempts < 10)
     {
-        std::cout << "Dentro do while connect_server" << endl;
+        //std::cout << "Dentro do while connect_server" << endl;
         if (connect(bully_curr_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
         {
             std::string username_with_null = this->backup_name;
