@@ -23,18 +23,12 @@ bool Server::start()
         return false;
     }
 
-    std::cout << "ANTES DE FAZER ALGO" << std::endl;
-    std::cout << "IP DO SERVIDOR: " << inet_ntoa(server_addr.sin_addr) << std::endl;
-    std::cout << "PORTA DO SERVIDOR: " << ntohs(server_addr.sin_port) << std::endl;
 
     // Configuração do endereço do servidor
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY; // Escuta em qualquer interface
     server_addr.sin_port = htons(port);
 
-    std::cout << "DEPOIS DE FAZER ALGO" << std::endl;
-    std::cout << "IP DO SERVIDOR: " << inet_ntoa(server_addr.sin_addr) << std::endl;
-    std::cout << "PORTA DO SERVIDOR: " << ntohs(server_addr.sin_port) << std::endl;
 
     // Bind do socket à porta
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
@@ -1079,6 +1073,7 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             std::cout << "MANDANDO OK!" << std::endl;
             send(backup_sock, "ok", 3, 0);
             std::cout << "MANDAdo OK!" << std::endl;
+            sleep(10);
 
             // recv "ok"
         }
