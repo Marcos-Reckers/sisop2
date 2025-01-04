@@ -37,7 +37,7 @@ public:
     void handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue);
     
     bool is_socket_open();
-    void heartbeat();
+    void heartbeat(int port);
 };
 
 #endif // CLIENTCLASS_H

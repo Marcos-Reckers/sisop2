@@ -50,8 +50,8 @@ void Client::handle_connection()
         Threads::AtomicQueue<std::vector<Packet>> received_queue;
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
-
-        active_threads.emplace_back(&Client::heartbeat, this);
+        int porta = 8080;
+        active_threads.emplace_back(&Client::heartbeat, this, porta);
 
         // std::thread io_thread([this, &send_queue, &received_queue, &sync_queue]()
         //                       { this->handle_io(send_queue, received_queue, sync_queue); });
@@ -148,7 +148,7 @@ void Client::wait_connection(int porta)
     // this->running = true;
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
-    active_threads.emplace_back(&Client::heartbeat, this);
+    active_threads.emplace_back(&Client::heartbeat, this, 8081);
 }
 
 int16_t Client::connect_to_server()
@@ -642,7 +642,7 @@ bool Client::is_socket_open()
     return true;
 }
 
-void Client::heartbeat()
+void Client::heartbeat(int port)
 {
     while (this->running)
     {
@@ -651,7 +651,7 @@ void Client::heartbeat()
         {
             std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
             // this->running = false;
-            wait_connection(8080);
+            wait_connection(port);
             return;
         }
     }
