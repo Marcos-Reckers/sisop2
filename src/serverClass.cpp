@@ -8,7 +8,7 @@ std::mutex add_client_mutex;
 std::mutex bully_mutex;
 
 // Construtor da classe que recebe a porta e tipo como argumento
-Server::Server(int port, string type) : server_fd(-1), type(type), port(port)
+Server::Server(int port, string type) : server_fd(-1), port(port), type(type) 
 {
     memset(&server_addr, 0, sizeof(server_addr));
 }
@@ -269,38 +269,40 @@ void Server::connect_clients()
 
     for (auto client : clients_info)
     {
-
         if (client.username == this->backup_name)
         {
             continue;
         }
-
-        client.addr.sin_port = htons(atoi("8080"));
-
-        int client_sock = socket(AF_INET, SOCK_STREAM, 0);
-        if (client_sock < 0)
+        if (client.username.find("BACKUP") == std::string::npos)
         {
-            cout << "Erro ao criar socket" << endl;
-            return;
-        }
 
-        // Tenta conectar ao servidor por 100 segundos
-        int attempts = 0;
-        while (attempts < 10)
-        {
-            if (connect(client_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
+            client.addr.sin_port = htons(atoi("8080"));
+
+            int client_sock = socket(AF_INET, SOCK_STREAM, 0);
+            if (client_sock < 0)
             {
-                std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
-
-                client_threads.emplace_back(&Server::handle_communication, this, client_sock);
-
-                break;
+                cout << "Erro ao criar socket" << endl;
+                return;
             }
-            else
+
+            // Tenta conectar ao servidor por 100 segundos
+            int attempts = 0;
+            while (attempts < 10)
             {
-                cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
-                sleep(1); // Aguarda 1 segundo antes de tentar novamente
-                attempts++;
+                if (connect(client_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
+                {
+                    std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
+
+                    client_threads.emplace_back(&Server::handle_communication, this, client_sock);
+
+                    break;
+                }
+                else
+                {
+                    cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+                    sleep(1); // Aguarda 1 segundo antes de tentar novamente
+                    attempts++;
+                }
             }
         }
     }
@@ -524,7 +526,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
             removeClient(client_sock);
 
-            if(this->type == "-p")
+            if (this->type == "-p")
             {
                 std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
 
@@ -542,15 +544,12 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
             }
 
-            
-
             // aqui esta o perigo
             // clients_info.erase(std::remove_if(clients_info.begin(), clients_info.end(), [client_sock](ClientInfo &client_info)
             //                                   { return client_info.sock == client_sock; }),
             //                    clients_info.end());
 
             // ClientInfo *client = find_client_info(clients_info, client_sock);
-            
 
             // for (auto client : clients_info)
             // {
@@ -971,6 +970,206 @@ int Server::connect_backup_servers()
     return -1;
 }
 
+void Server::bully()
+{
+
+    std::cout << "ENTREI NO BULLY" << std::endl;
+    // map entre addr e bully_number de backup;
+    std::map<int, sockaddr_in> backup_bully_info;
+
+    std::vector<int> backup_sockets = getUserSockets("BACKUP");
+
+    backup_sockets.erase(
+        std::remove_if(backup_sockets.begin(), backup_sockets.end(),
+                       [this](int socket)
+                       { return getUsername(socket) == this->backup_name; }),
+        backup_sockets.end());
+
+    this->bully_number = this->backup_name.substr(6);
+
+    for (auto socket : backup_sockets)
+    {
+        std::string backup_name = getUsername(socket);
+        int backup_number = std::stoi(backup_name.substr(6));
+
+        for (const auto &client : clients_info)
+        {
+            if (client.username == backup_name)
+            {
+                backup_bully_info[backup_number] = client.addr;
+                break;
+            }
+        }
+    }
+
+    election(backup_bully_info);
+}
+
+void Server::election(std::map<int, sockaddr_in> backup_bully_info)
+{
+    if (backup_bully_info.empty())
+    {
+        std::cout << "backup_bully_info vazio deu pau" << std::endl;
+    }
+
+    std::cout << "loop election" << std::endl;
+
+    for (auto backup : backup_bully_info)
+    {
+        if ((stoi(this->bully_number)) > backup.first)
+        {
+            // receive and accept
+            int bully_sock = wait_connect_from_backup(backup.second);
+            std::cout << "Sai do wait_connect_from_backup" << std::endl;
+            std::cout << "BULLY SOCK (fodao): " << bully_sock << std::endl;
+
+            this->type = "-p";
+
+            for (auto &client_info : clients_info)
+            {
+                if (client_info.addr.sin_addr.s_addr == backup.second.sin_addr.s_addr)
+                {
+                    client_info.sock = bully_sock;
+                    break;
+                }
+                
+                for (auto &client : clients)
+                {
+                    if (client.second == client_info.username)
+                    {                        
+                        clients.erase(client.first);
+                        clients[bully_sock] = client_info.username;
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // connect and send
+            int backup_sock = connect_to_backup(backup.second);
+            std::cout << "Sai do connect_to_backup" << std::endl;
+            std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
+
+            std::cout << "SLEEP POR 100 SEGUNDOS" << std::endl;
+            sleep(100);
+
+            // recv "ok"
+        }
+    }
+}
+
+int Server::connect_to_backup(sockaddr_in &backup_addr)
+{
+    // Cria o socket
+    int bully_curr_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (bully_curr_sock < 0)
+    {
+        cout << "Erro ao criar socket" << endl;
+        return -1;
+    }
+
+    std::cout << "ANTES DE MUDAR" << std::endl;
+    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
+    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
+
+    backup_addr.sin_family = AF_INET;
+    backup_addr.sin_port = htons(atoi("8080"));
+    bzero(&(backup_addr.sin_zero), 8);
+
+    std::cout << "DPS DE MUDAR A PORTA PRA 8080" << std::endl;
+    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
+    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
+
+    // Tenta conectar ao servidor por 100 segundos
+    int attempts = 0;
+    while (attempts < 10)
+    {
+        if (connect(bully_curr_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) == 0)
+        {
+            cout << "DO BACKUP TENTANDO CONECTAR: Conectado ao backup!" << endl;
+            return bully_curr_sock;
+        }
+        else
+        {
+            cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+            sleep(1); // Aguarda 1 segundo antes de tentar novamente
+            attempts++;
+        }
+    }
+
+    cout << "Falha na conexão TIMEOUT" << endl;
+    return -3;
+}
+
+int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
+{
+    port = 8080;
+    std::cout << "ESPERANDO CONEXÃO DO BACKUP" << std::endl;
+
+    int new_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (new_sock == -1)
+    {
+        std::cerr << "Erro ao criar o socket DO BACKUP ESPERANDO CONEXÃO." << std::endl;
+        return -6;
+    }
+
+    int opt = 1;
+    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        std::cerr << "Erro ao configurar SO_REUSEADDR NO BACKUP ESPERANDO CONEXÃO." << std::endl;
+        close(new_sock);
+        return -2;
+    }
+
+    memset(&backup_addr, 0, sizeof(backup_addr));
+    backup_addr.sin_family = AF_INET;
+    backup_addr.sin_addr.s_addr = INADDR_ANY;
+    backup_addr.sin_port = htons(port);
+
+    if (bind(new_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) < 0)
+    {
+        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao fazer o bind na porta: " << backup_addr.sin_port << "." << std::endl;
+    }
+    else
+    {
+        std::cout << "DO BACKUP ESPERANDO CONEXÃO: Bind realizado com sucesso na porta: " << port << std::endl;
+    }
+
+    if (listen(new_sock, 1) < 0)
+    {
+        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao colocar o servidor em modo de escuta." << std::endl;
+        close(new_sock);
+        return -99;
+    }
+
+    sockaddr_in server_addr;
+    socklen_t server_len = sizeof(server_addr);
+    int bully_sock = -1;
+
+    while (true)
+    {
+        std::cout << "tentando aceitar conexao: " << std::endl;
+        bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
+        if (bully_sock >= 0)
+        {
+            std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
+            break;
+        }
+        else
+        {
+            std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao aceitar conexão. Tentando novamente..." << std::endl;
+            sleep(1); // Aguarda 1 segundo antes de tentar novamente
+        }
+    }
+
+    return bully_sock;
+}
+
+// void Server::answer(int backup_sock)
+// {
+// }
+
 // void Server::bully()
 // {
 //     std::string election = "election: ";
@@ -1120,183 +1319,4 @@ int Server::connect_backup_servers()
 
 //         return;
 //     }
-// }
-
-void Server::bully()
-{
-
-    std::cout << "ENTREI NO BULLY" << std::endl;
-    // map entre addr e bully_number de backup;
-    std::map<int, sockaddr_in> backup_bully_info;
-
-    std::vector<int> backup_sockets = getUserSockets("BACKUP");
-
-    backup_sockets.erase(
-        std::remove_if(backup_sockets.begin(), backup_sockets.end(),
-                       [this](int socket)
-                       { return getUsername(socket) == this->backup_name; }),
-        backup_sockets.end());
-
-    this->bully_number = this->backup_name.substr(6);
-
-    for (auto socket : backup_sockets)
-    {
-        std::string backup_name = getUsername(socket);
-        int backup_number = std::stoi(backup_name.substr(6));
-
-        for (const auto &client : clients_info)
-        {
-            if (client.username == backup_name)
-            {
-                backup_bully_info[backup_number] = client.addr;
-                break;
-            }
-        }
-    }
-
-    election(backup_bully_info);
-}
-
-void Server::election(std::map<int, sockaddr_in> backup_bully_info)
-{
-    if (backup_bully_info.empty())
-    {
-        std::cout << "backup_bully_info vazio deu pau" << std::endl;
-    }
-
-    std::cout << "loop election" << std::endl;
-
-    for (auto backup : backup_bully_info)
-    {
-        if ((stoi(this->bully_number)) > backup.first)
-        {
-            // receive and accept
-            int bully_sock = wait_connect_from_backup(backup.second);
-            std::cout << "Sai do wait_connect_from_backup" << std::endl;
-            std::cout << "BULLY SOCK (fodao): " << bully_sock << std::endl;
-
-            this->type = "-p";
-        }
-        else
-        {
-            // connect and send
-            int backup_sock = connect_to_backup(backup.second);
-            std::cout << "Sai do connect_to_backup" << std::endl;
-            std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
-
-            std::cout << "SLEEP POR 100 SEGUNDOS" << std::endl;
-            sleep(100);
-        }
-    }
-}
-
-int Server::connect_to_backup(sockaddr_in &backup_addr)
-{
-    // Cria o socket
-    int bully_curr_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (bully_curr_sock < 0)
-    {
-        cout << "Erro ao criar socket" << endl;
-        return -1;
-    }
-
-    std::cout << "ANTES DE MUDAR" << std::endl;
-    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
-    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
-
-    backup_addr.sin_family = AF_INET;
-    backup_addr.sin_port = htons(atoi("8080"));
-    bzero(&(backup_addr.sin_zero), 8);
-
-    std::cout << "DPS DE MUDAR A PORTA PRA 8080" << std::endl;
-    std::cout << "endereço QUE TA TENTANDO SE CONECTAR: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
-    std::cout << "porta QUE TA TENTANDO SE CONECTAR: " << ntohs(backup_addr.sin_port) << std::endl;
-
-    // Tenta conectar ao servidor por 100 segundos
-    int attempts = 0;
-    while (attempts < 10)
-    {
-        if (connect(bully_curr_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) == 0)
-        {
-            cout << "DO BACKUP TENTANDO CONECTAR: Conectado ao backup!" << endl;
-            return bully_curr_sock;
-        }
-        else
-        {
-            cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
-            sleep(1); // Aguarda 1 segundo antes de tentar novamente
-            attempts++;
-        }
-    }
-
-    cout << "Falha na conexão TIMEOUT" << endl;
-    return -3;
-}
-
-int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
-{
-    port = 8080;
-    std::cout << "ESPERANDO CONEXÃO DO BACKUP" << std::endl;
-
-    int new_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (new_sock == -1)
-    {
-        std::cerr << "Erro ao criar o socket DO BACKUP ESPERANDO CONEXÃO." << std::endl;
-        return -6;
-    }
-
-    int opt = 1;
-    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    {
-        std::cerr << "Erro ao configurar SO_REUSEADDR NO BACKUP ESPERANDO CONEXÃO." << std::endl;
-        close(new_sock);
-        return -2;
-    }
-
-    memset(&backup_addr, 0, sizeof(backup_addr));
-    backup_addr.sin_family = AF_INET;
-    backup_addr.sin_addr.s_addr = INADDR_ANY;
-    backup_addr.sin_port = htons(port);
-
-    if (bind(new_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) < 0)
-    {
-        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao fazer o bind na porta: " << backup_addr.sin_port << "." << std::endl;
-    }
-    else
-    {
-        std::cout << "DO BACKUP ESPERANDO CONEXÃO: Bind realizado com sucesso na porta: " << port << std::endl;
-    }
-
-    if (listen(new_sock, 1) < 0)
-    {
-        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao colocar o servidor em modo de escuta." << std::endl;
-        close(new_sock);
-        return -99;
-    }
-
-    sockaddr_in server_addr;
-    socklen_t server_len = sizeof(server_addr);
-    int bully_sock = -1;
-
-    while (true)
-    {
-        std::cout << "tentando aceitar conexao: " << std::endl;
-        bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
-        if (bully_sock >= 0)
-        {
-            std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
-            break;
-        }
-        else
-        {
-            std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao aceitar conexão. Tentando novamente..." << std::endl;
-            sleep(1); // Aguarda 1 segundo antes de tentar novamente
-        }
-    }
-
-    return bully_sock;
-}
-
-// void Server::answer(int backup_sock)
-// {
 // }
