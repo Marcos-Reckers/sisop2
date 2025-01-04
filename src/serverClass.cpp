@@ -300,6 +300,20 @@ void Server::connect_clients()
                 {
                     std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
 
+                    client.sock = client_sock;
+
+                    for (auto &client_map : clients)
+                    {
+                        if (client_map.second == client.username)
+                        {
+                            clients.erase(client_map.first);
+                            clients[client_sock] = client.username;
+                            break;
+                        }
+                    }
+
+                    std::cout << "NOVO: meu username eh: " << client.username << " sock: " << client.sock << " addr: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
+
                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
 
                     break;
