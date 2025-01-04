@@ -1064,7 +1064,7 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
                 }
             }
 
-            std::string buffer[3];
+            char buffer[3];
             sleep(5);
             recv(new_info.sock, buffer, 3, 0);
             std::cout << "recebi: " << buffer << std::endl;
