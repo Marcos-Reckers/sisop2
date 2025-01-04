@@ -146,7 +146,7 @@ void Client::wait_connection()
     // this->running = true;
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
-    //active_threads.emplace_back(&Client::heartbeat, this);
+    active_threads.emplace_back(&Client::heartbeat, this);
 }
 
 int16_t Client::connect_to_server()
