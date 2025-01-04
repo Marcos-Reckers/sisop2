@@ -181,16 +181,21 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 std::cout << "SAI DO BULLY" << std::endl;
 
+                std::cout << "clients_info.size(): " << clients_info.size() << std::endl;
+
                 for (size_t i = 0; i < clients_info.size(); i++)
                 {
+                    std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
                     if (clients_info[i].username.find(this->backup_name) != std::string::npos)
                     {
                         clients_info.erase(clients_info.begin() + i);
                     }
                 }
 
+                std::cout << "antes do segundo for" << std::endl;
                 for (auto client : clients)
                 {
+                    cout << "removendo client: " << client.second << endl;
                     if (client.second.find(this->backup_name) != std::string::npos)
                     {
                         clients.erase(client.first);
