@@ -100,7 +100,7 @@ void Client::handle_connection()
 
 void Client::wait_connection()
 {
-    port = atoi(server_port.c_str());
+    port = 8080;
     std::cout << "Aguardando conexão de um novo servidor BACKUP..." << std::endl;
 
     int new_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -146,7 +146,7 @@ void Client::wait_connection()
     // this->running = true;
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
-    active_threads.emplace_back(&Client::heartbeat, this);
+    //active_threads.emplace_back(&Client::heartbeat, this);
 }
 
 int16_t Client::connect_to_server()
