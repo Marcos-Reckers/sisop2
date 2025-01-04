@@ -1228,9 +1228,9 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     std::cout << "endereço QUE TA ESPERANDO: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
     std::cout << "porta QUE TA ESPERANDO: " << ntohs(backup_addr.sin_port) << std::endl;
 
-    memset(&backup_addr, 0, sizeof(backup_addr));
-    backup_addr.sin_family = AF_INET;
-    backup_addr.sin_addr.s_addr = INADDR_ANY;
+    // memset(&backup_addr, 0, sizeof(backup_addr));
+    // backup_addr.sin_family = AF_INET;
+    // backup_addr.sin_addr.s_addr = INADDR_ANY;
     backup_addr.sin_port = htons(port);
 
     std::cout << "DPS DE MUDAR" << std::endl;
