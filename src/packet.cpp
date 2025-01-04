@@ -100,7 +100,6 @@ Packet Packet::create_packet_cmd(const std::string &command)
     }
     else if (command.find("sync") != std::string::npos)
     {
-        std::cout << "PAYLOAD DO PACOTE SYNC (2): " << std::string(payload.begin(), payload.end()) << std::endl;
         return Packet(2, 1, 1, original_payload_size, payload);
     }
     else if (command.find("broadcast") != std::string::npos)
@@ -113,7 +112,6 @@ Packet Packet::create_packet_cmd(const std::string &command)
     }
     else if (command.find("client_info") != std::string::npos)
     {
-        std::cout << "PAYLOAD DO PACOTE CLIENT_INFO (6): " << std::string(payload.begin(), payload.end()) << std::endl;
         Packet pkt = Packet(6, 1, 1, original_payload_size, payload);
         return pkt;
     }
