@@ -221,6 +221,8 @@ void Server::connect_server(string main_ip_address, string main_port)
                 if (this->type == "-b")
                 {
                     std::cout << "Sou um backup" << endl;
+                    std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
+                    betinha.join();
                 }
 
                 else
@@ -1050,6 +1052,8 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             int backup_sock = connect_to_backup(backup.second);
             std::cout << "Sai do connect_to_backup" << std::endl;
             std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
+
+            this->new_backup_sock = backup_sock;
 
             // recv "ok"
         }

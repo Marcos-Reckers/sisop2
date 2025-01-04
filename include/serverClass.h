@@ -22,6 +22,8 @@ private:
     std::map<int, std::string> clients;      // Map para armazenar os clientes conectados
     std::map<std::string, std::unique_ptr<sem_t>> active;
 
+    int new_backup_sock;
+
     std::vector<ClientInfo> clients_info;
 
     vector<int> ports;
