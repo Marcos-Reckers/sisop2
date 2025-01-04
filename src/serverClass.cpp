@@ -188,14 +188,14 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 std::cout << "SAI DO BULLY" << std::endl;
 
-                for (auto client_info : clients_info)
-                {   
-                    std::cout << "client_info: " << client_info.username << std::endl;
-                }
+                // for (auto client_info : clients_info)
+                // {
+                //     std::cout << "client_info: " << client_info.username << std::endl;
+                // }
 
                 for (size_t i = 0; i < clients_info.size(); i++)
                 {
-                    std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
+                    // std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
                     if (clients_info[i].username.find(this->backup_name) != std::string::npos)
                     {
                         clients_info.erase(clients_info.begin() + i);
@@ -204,26 +204,35 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 std::cout << "antes do segundo for" << std::endl;
 
-                for (auto client : clients)
-                {
-                    cout << "client: " << client.second << endl;
-                }
+                // for (auto client : clients)
+                // {
+                //     cout << "client: " << client.second << endl;
+                // }
 
-                for (auto client : clients)
-                {
-                    cout << "removendo client: " << client.second << endl;
+                // for (auto client : clients)
+                // {
+                //     cout << "removendo client: " << client.second << endl;
 
-                    // if (client.second.find(this->backup_name) != std::string::npos)
-                    // {
-                    //     clients.erase(client.first);
-                    // }
-                }
+                //     // if (client.second.find(this->backup_name) != std::string::npos)
+                //     // {
+                //     //     clients.erase(client.first);
+                //     // }
+                // }
 
                 std::cout << "DPS DOS FOR" << std::endl;
 
-                thread connecting_to_clients(&Server::connect_clients, this);
+                if (this->type == "-b")
+                {
+                    std::cout << "Sou um backup" << endl;
+                }
+                
+                else
+                {
+                    std::cout << "Sou um servidor principal" << endl;
 
-                connecting_to_clients.join();
+                    thread connecting_to_clients(&Server::connect_clients, this);
+                    connecting_to_clients.join();
+                }
 
                 backup_communication.join();
             }
@@ -1157,7 +1166,8 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             int bully_sock = wait_connect_from_backup(backup.second);
             std::cout << "Sai do wait_connect_from_backup" << std::endl;
             std::cout << "BULLY SOCK (fodao): " << bully_sock << std::endl;
-            // answer(bully_sock);
+
+            this->type = "-p";
         }
         else
         {
@@ -1232,18 +1242,10 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         return -2;
     }
 
-    std::cout << "ANTES DE MUDAR" << std::endl;
-    std::cout << "endereço QUE TA ESPERANDO: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
-    std::cout << "porta QUE TA ESPERANDO: " << ntohs(backup_addr.sin_port) << std::endl;
-
     memset(&backup_addr, 0, sizeof(backup_addr));
     backup_addr.sin_family = AF_INET;
     backup_addr.sin_addr.s_addr = INADDR_ANY;
     backup_addr.sin_port = htons(port);
-
-    std::cout << "DPS DE MUDAR" << std::endl;
-    std::cout << "endereço QUE TA ESPERANDO: " << inet_ntoa(backup_addr.sin_addr) << std::endl;
-    std::cout << "porta QUE TA ESPERANDO: " << ntohs(backup_addr.sin_port) << std::endl;
 
     if (bind(new_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) < 0)
     {

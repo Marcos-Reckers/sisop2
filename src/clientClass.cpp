@@ -88,8 +88,6 @@ void Client::handle_connection()
         {
             thread.join();
         }
-
-        std::cout << "DEI JOIN EM TODAS AS THREADS!" << std::endl;
     }
 
     else
@@ -268,16 +266,7 @@ void Client::handle_io(Threads::AtomicQueue<std::vector<Packet>> &send_queue, Th
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
             }
         }
-
-        // // TODO: ADD MUTEX LATER()
-        // if (this->sock == 0)
-        // {
-        //     std::cout << "Conexão com servidor encerrada. (ANTES DO WAIT_CONNECTION)" << std::endl;
-        //     this->sock = Client::wait_connection();
-        //     std::cout << "Conexão reestabelecida com BACKUP." << std::endl;
-        // }
     }
-
     return;
 }
 
