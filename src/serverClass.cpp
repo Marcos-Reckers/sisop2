@@ -172,20 +172,16 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 maintain_connection.join();
 
-                // chamar o bully
-                bully();
-                // se nao for o lider, cria uma nova conexao com o lider, e cria um novo heartbeat com o lider
-                // se for o lider, faz o q está aqui em baixo.
+                bully_mutex.lock();
 
-                // seg fault aqui
+                bully();
+
+                bully_mutex.unlock();
 
                 std::cout << "SAI DO BULLY" << std::endl;
 
-                std::cout << "clients_info.size(): " << clients_info.size() << std::endl;
-
                 for (size_t i = 0; i < clients_info.size(); i++)
                 {
-                    std::cout << "removendo client_info: " << clients_info[i].username << std::endl;
                     if (clients_info[i].username.find(this->backup_name) != std::string::npos)
                     {
                         clients_info.erase(clients_info.begin() + i);
@@ -193,9 +189,16 @@ void Server::connect_server(string main_ip_address, string main_port)
                 }
 
                 std::cout << "antes do segundo for" << std::endl;
+
+                for (auto client : clients)
+                {
+                    cout << "client: " << client.second << endl;
+                }
+
                 for (auto client : clients)
                 {
                     cout << "removendo client: " << client.second << endl;
+
                     if (client.second.find(this->backup_name) != std::string::npos)
                     {
                         clients.erase(client.first);
@@ -499,9 +502,9 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             std::cout << "Conexão do cliente " << username << " encerrada." << std::endl;
             removeClient(client_sock);
 
-            clients_info.erase(std::remove_if(clients_info.begin(), clients_info.end(), [client_sock](ClientInfo &client_info)
-                                              { return client_info.sock == client_sock; }),
-                               clients_info.end());
+            // clients_info.erase(std::remove_if(clients_info.begin(), clients_info.end(), [client_sock](ClientInfo &client_info)
+            //                                   { return client_info.sock == client_sock; }),
+            //                    clients_info.end());
 
             // ClientInfo *client = find_client_info(clients_info, client_sock);
             string packet_string = create_string_from_client_info(clients_info);
@@ -1089,6 +1092,7 @@ int Server::connect_backup_servers()
 
 void Server::bully()
 {
+
     std::cout << "ENTREI NO BULLY" << std::endl;
     // map entre addr e bully_number de backup;
     std::map<int, sockaddr_in> backup_bully_info;
@@ -1117,9 +1121,8 @@ void Server::bully()
             }
         }
     }
-    
-    election(backup_bully_info);
 
+    election(backup_bully_info);
 }
 
 void Server::election(std::map<int, sockaddr_in> backup_bully_info)
@@ -1245,7 +1248,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 
     sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
-    int bully_sock=-1;
+    int bully_sock = -1;
 
     while (true)
     {
