@@ -1056,6 +1056,7 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
                     }
                 }
             }
+
             std::string buffer[3];
             sleep(5);
             recv(bully_sock, buffer, 3, 0);
@@ -1175,6 +1176,7 @@ int Server::wait_connect_from_backup(sockaddr_in &backup_addr)
         bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
         if (bully_sock >= 0)
         {
+            std::cout << "server_addr do accept: " << inet_ntoa(server_addr.sin_addr) << std::endl;
             std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
             break;
         }
