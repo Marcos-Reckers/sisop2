@@ -8,7 +8,7 @@ std::mutex add_client_mutex;
 std::mutex bully_mutex;
 
 // Construtor da classe que recebe a porta e tipo como argumento
-Server::Server(int port, string type) : server_fd(-1), port(port), type(type) 
+Server::Server(int port, string type) : server_fd(-1), port(port), type(type)
 {
     memset(&server_addr, 0, sizeof(server_addr));
 }
@@ -1032,11 +1032,11 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
                     client_info.sock = bully_sock;
                     break;
                 }
-                
+
                 for (auto &client : clients)
                 {
                     if (client.second == client_info.username)
-                    {                        
+                    {
                         clients.erase(client.first);
                         clients[bully_sock] = client_info.username;
                         break;
@@ -1050,9 +1050,6 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             int backup_sock = connect_to_backup(backup.second);
             std::cout << "Sai do connect_to_backup" << std::endl;
             std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
-
-            std::cout << "SLEEP POR 100 SEGUNDOS" << std::endl;
-            sleep(100);
 
             // recv "ok"
         }
