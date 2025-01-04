@@ -175,10 +175,8 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 thread backup_communication(&Server::handle_communication, this, bully_curr_sock);
 
-                // thread sync_servers(&Server::sync_servers, this, bully_curr_sock);
-                // sync_servers.join();
-
                 maintain_connection.join();
+                backup_communication.join();
 
                 bully_mutex.lock();
 
@@ -233,8 +231,6 @@ void Server::connect_server(string main_ip_address, string main_port)
                     thread connecting_to_clients(&Server::connect_clients, this);
                     connecting_to_clients.join();
                 }
-
-                backup_communication.join();
             }
 
             else
@@ -280,8 +276,8 @@ void Server::connect_clients()
 
         client.addr.sin_port = htons(atoi("8080"));
 
-        int bully_curr_sock = socket(AF_INET, SOCK_STREAM, 0);
-        if (bully_curr_sock < 0)
+        int client_sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (client_sock < 0)
         {
             cout << "Erro ao criar socket" << endl;
             return;
@@ -291,9 +287,12 @@ void Server::connect_clients()
         int attempts = 0;
         while (attempts < 10)
         {
-            if (connect(bully_curr_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
+            if (connect(client_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
             {
                 std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
+
+                client_threads.emplace_back(&Server::handle_communication, this, client_sock);
+
                 break;
             }
             else
@@ -1175,6 +1174,9 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             int backup_sock = connect_to_backup(backup.second);
             std::cout << "Sai do connect_to_backup" << std::endl;
             std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
+
+            std::cout << "SLEEP POR 100 SEGUNDOS" << std::endl;
+            sleep(100);
         }
     }
 }
