@@ -114,10 +114,18 @@ vector<FileInfo> FileInfo::list_files(string path)
     }
     else
     {
+        //verifica se é uma pasta
+        if (!std::filesystem::is_directory(path))
+        {
+            std::cerr << "O caminho fornecido não é um diretório." << std::endl;
+            return files;
+        }
+        
         for (const auto &entry : std::filesystem::directory_iterator(path))
         {
             FileInfo file_info;
             file_info.retrieve_info_from_file(entry.path());
+            file_info.print();
             files.push_back(file_info);
         }
         return files;
