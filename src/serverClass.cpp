@@ -634,8 +634,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             else if (received_packet.get_type() == 2)
             {
 
-                std::cout << "HANDLE_IO RECEBEU PACOTE DO TIPO 2: " << received_packet.get_payload_as_string() << std::endl;
-
                 if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
@@ -868,8 +866,6 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
         if (packets[0].get_type() == 2)
         {
             string cmd = packets[0].get_payload_as_string();
-
-            std::cout << "Comando recebido via HANDLE_sync ONDE TA DANDO PAU: " << cmd << std::endl;
 
             if (cmd == "upload_sync")
             {
