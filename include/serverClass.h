@@ -90,6 +90,8 @@ public:
     std::map<int, std::string> &getClients();
     std::string getUsername(int client_sock);
     vector<int> getUserSockets(std::string username);
+
+    void last_backup();
 };
 
 #endif // SERVERCLASS_H

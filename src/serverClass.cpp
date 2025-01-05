@@ -162,8 +162,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                 thread backup_communication(&Server::handle_communication, this, bully_curr_sock);
 
                 maintain_connection.join();
-                
-                
+
                 bully_mutex.lock();
 
                 bully();
@@ -176,14 +175,13 @@ void Server::connect_server(string main_ip_address, string main_port)
                     std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
                     std::thread maintain_connection(&Server::heartbeat, this, this->new_backup_sock);
                     maintain_connection.join();
-                    goto bully_goto;
+                    last_backup();
+
                     betinha.join();
                 }
 
                 else
                 {
-                    bully_goto:
-                    this->type = "-p";
                     std::cout << "Sou um servidor principal" << endl;
 
                     clients_info.erase(std::remove_if(
@@ -322,7 +320,6 @@ void Server::connect_clients()
                     attempts++;
                 }
             }
-
         }
     }
 }
@@ -1208,6 +1205,14 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     client_info.username = "BACKUP";
 
     return client_info;
+}
+
+void Server::last_backup()
+{
+    std::cout << "Sou um servidor principal" << endl;
+    this->type = "-p";
+    thread connecting_to_clients(&Server::connect_clients, this);
+    connecting_to_clients.join();
 }
 
 // void Server::answer(int backup_sock)
