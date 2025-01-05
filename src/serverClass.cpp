@@ -118,6 +118,7 @@ void Server::acceptClients()
 
             std::cout << "Conexão aceita de: " << username_str << std::endl;
             this->temp_username = username_str;
+            this->new_folder_name = "sync_dir_" + username_str;
         }
         else
         {
