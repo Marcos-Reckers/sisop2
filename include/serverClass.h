@@ -30,6 +30,8 @@ private:
 
     string bully_number;
 
+    string temp_username;
+
 public:
 
     std::string backup_name;
@@ -92,6 +94,7 @@ public:
     vector<int> getUserSockets(std::string username);
 
     void last_backup();
+    void send_username(int client_sock, int socket);
 };
 
 #endif // SERVERCLASS_H

@@ -115,6 +115,10 @@ Packet Packet::create_packet_cmd(const std::string &command)
         Packet pkt = Packet(6, 1, 1, original_payload_size, payload);
         return pkt;
     }
+    else if (command.find("username") != std::string::npos)
+    {
+        return Packet(7, 1, 1, original_payload_size, payload);
+    }
     else
     {
         return Packet(1, 1, 1, original_payload_size, payload);

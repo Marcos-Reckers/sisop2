@@ -265,11 +265,13 @@ void Server::connect_clients()
     std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
 
     std::cout << "REMOVENDO TODOS MENOS BACKUP DA CLIENTS" << std::endl;
-    
+
     clients.clear();
 
-    for (auto client : clients_info){
-        if(client.username.find("BACKUP") != std::string::npos){
+    for (auto client : clients_info)
+    {
+        if (client.username.find("BACKUP") != std::string::npos)
+        {
             clients[client.sock] = client.username;
         }
     }
@@ -427,6 +429,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
                     for (auto socket : backup_sockets)
                     {
+                        send_username(client_sock, socket);
                         for (auto pkt : packet)
                         {
                             pkt.set_type(2);
@@ -531,6 +534,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
                     for (auto socket : backup_sockets)
                     {
+                        send_username(client_sock, socket);
                         for (auto pkt : packet)
                         {
                             pkt.set_type(2);
@@ -664,6 +668,14 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     packets_to_sync_queue.push_back(received_packet);
                 }
             }
+            else if (received_packet.get_type() == 7)
+            {
+                received_packet.clean_payload();
+                string payload = received_packet.get_payload_as_string();
+                cout << "RECEBENDO O USERNAME: " << payload << endl;
+                this->temp_username = payload;
+            }
+
             else
             {
                 std::cerr << "Pacote recebido com tipo inválido." << std::endl;
@@ -1243,6 +1255,21 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     client_info.username = "BACKUP";
 
     return client_info;
+}
+
+void Server::send_username(int client_sock, int socket)
+{
+    vector<Packet> pac = FileInfo::create_packet_vector("username;" + getUsername(client_sock));
+    for (auto pkt : pac)
+    {
+        std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
+        ssize_t sent_bytes = FileInfo::sendAll(socket, packet_bytes.data(), packet_bytes.size(), 0);
+        if (sent_bytes < 0)
+        {
+            std::cerr << "Erro ao enviar pacote." << std::endl;
+        }
+        std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+    }
 }
 
 // void Server::last_backup()

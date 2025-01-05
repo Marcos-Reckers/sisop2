@@ -498,6 +498,12 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         solo_pkt.push_back(pkt_cmd);
         return solo_pkt;
     }
+    else if (command.find("username") != std::string::npos)
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
+    }
     else
     {
         std::cerr << "Comando inválido: " << command << std::endl;
