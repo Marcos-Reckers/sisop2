@@ -177,6 +177,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                     maintain_connection.join();
                     bully_mutex.lock();
                     bully();
+                    sleep(3);
                     bully_mutex.unlock();
                     if (this->type == "-p")
                     {
@@ -191,7 +192,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                         {
                             std::cout << "client_info: " << client.username << std::endl;
                         }
-
+                        sleep(3);
                         thread connecting_to_clients(&Server::connect_clients, this);
                         connecting_to_clients.join();
                     }
