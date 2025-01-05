@@ -300,7 +300,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
     // FileInfo::print_list_files(server_files);
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    std::string path = exec_path + "/" + new_folder_name;
+    std::string path = exec_path + "/" + new_folder_name + "/";
     vector<FileInfo> client_files = FileInfo::list_files(path);
 
     vector<FileInfo> files_to_upload;
@@ -329,7 +329,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
 
     for (auto file : files_to_upload)
     {
-        string file_path = path + "/" + file.get_file_name();
+        string file_path = path + file.get_file_name();
         cout << "Enviando arquivo: " << file_path << endl;
         send_queue.produce(FileInfo::create_packet_vector("upload_sync", file_path));
     }
@@ -359,7 +359,6 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
 
     for (auto file : files_to_download)
     {
-        cout << "Baixando arquivo: " << file.get_file_name() << endl;
         send_queue.produce(FileInfo::create_packet_vector("download", file.get_file_name()));
         auto download_packets = received_queue.consume_blocking();
         FileInfo::receive_file(download_packets, new_folder_name);
