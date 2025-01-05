@@ -264,8 +264,27 @@ void Server::connect_clients()
     // abre todas as threads pra cada um deles
     std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
 
+    std::cout << "REMOVENDO TODOS MENOS BACKUP DA CLIENTS" << std::endl;
+    for (auto client : clients)
+    {
+        std::cout << "SOCK: " << client.first << " USERNAME: " << client.second << std::endl;
+        if (client.second.find("BACKUP") == std::string::npos)
+        {
+            removeClient(client.first);
+        }
+    }
+
+    std::cout << "printando dps de remover: " << std::endl;
+    for (auto client : clients)
+    {
+        std::cout << "SOCK: " << client.first << " USERNAME: " << client.second << std::endl;
+    }
+
     for (auto client : clients_info)
     {
+
+        std::cout << "TENTANDO SE CONECTAR COM O CLIENTE: " << std::endl;
+
         char client_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
         std::cout << "meu username eh: " << client.username << " sock: " << client.sock << " addr: " << client_ip << ":" << ntohs(client.addr.sin_port) << std::endl;
@@ -297,17 +316,10 @@ void Server::connect_clients()
 
                     client.sock = client_sock;
 
-                    for (auto &client_map : clients)
-                    {
-                        if (client_map.second == client.username)
-                        {
-                            clients.erase(client_map.first);
-                            clients[client_sock] = client.username;
-                            break;
-                        }
-                    }
+                    addClient(client_sock, client.username);
 
                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
+                    attempts = 10;
                 }
                 else
                 {
@@ -327,17 +339,10 @@ void Server::connect_clients()
 
                     client.sock = client_sock;
 
-                    for (auto &client_map : clients)
-                    {
-                        if (client_map.second == client.username)
-                        {
-                            clients.erase(client_map.first);
-                            clients[client_sock] = client.username;
-                            break;
-                        }
-                    }
+                    addClient(client_sock, client.username);
 
                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
+                    attempts = 10;
                 }
                 else
                 {
@@ -347,6 +352,12 @@ void Server::connect_clients()
                 }
             }
         }
+    }
+
+    std::cout << "printando dps DE TUDOOOOO " << std::endl;
+    for (auto client : clients)
+    {
+        std::cout << "SOCK: " << client.first << " USERNAME: " << client.second << std::endl;
     }
 }
 
