@@ -148,13 +148,13 @@ void Server::connect_server(string main_ip_address, string main_port)
                 recebido = recv(bully_curr_sock, buffer, 3, 0);
             }
 
-            cout << "recebido: " << endl;
+            cout << "recebido primeiro ok: " << endl;
             for (auto c : buffer)
             {
                 std::cout << c;
             }
 
-            if (strcmp(buffer, "ok") == 0)
+            if (strstr(buffer, "ok") != NULL)
             {
                 std::cout << "Conexão estabelecida com o servidor principal" << endl;
                 thread maintain_connection(&Server::heartbeat, this, bully_curr_sock);
@@ -173,6 +173,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                 {
                     std::cout << "Sou um backup" << endl;
 
+                    std::cout << "depois do backup" << std::endl;
                     int recebido_betinha = 0;
                     char buffer_betinha[3];
 
@@ -181,7 +182,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                         recebido_betinha = recv(bully_curr_sock, buffer_betinha, 3, 0);
                     }
 
-                    cout << "recebido: " << endl;
+                    cout << "recebido segundo ok: " << endl;
                     for (auto c : buffer_betinha)
                     {
                         std::cout << c;
