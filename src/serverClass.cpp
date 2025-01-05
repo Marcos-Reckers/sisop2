@@ -931,13 +931,13 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
                 string file_name = file_info.get_file_name();
                 string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
                 cout << "Delete recebido para o arquvio: " << file_name << endl;
+                FileInfo::delete_file(file_path);
 
                 if (this->type == "-p")
                 {
                     cout << "Enviando delete_broadcast: " << file_name << endl;
                     auto pkts = FileInfo::create_packet_vector("delete_broadcast", file_name);
                     send_queue.produce(pkts);
-                    FileInfo::delete_file(file_path);
                     std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
                 }
             }
