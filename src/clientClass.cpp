@@ -359,6 +359,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
 
     for (auto file : files_to_download)
     {
+        cout << "Baixando arquivo: " << file.get_file_name() << endl;
         send_queue.produce(FileInfo::create_packet_vector("download", file.get_file_name()));
         auto download_packets = received_queue.consume_blocking();
         FileInfo::receive_file(download_packets, new_folder_name);
@@ -501,7 +502,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
             auto pkts = FileInfo::create_packet_vector("list_server");
             send_queue.produce(pkts);
             auto packets = received_queue.consume_blocking();
-            if (packets.size() < 2)
+            if (packets.size() < 3)
             {
                 std::cout << "Pasta do servidor vazia" << std::endl;
             }
