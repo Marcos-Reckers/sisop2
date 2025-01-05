@@ -265,16 +265,13 @@ void Server::connect_clients()
     std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
 
     std::cout << "REMOVENDO TODOS MENOS BACKUP DA CLIENTS" << std::endl;
-    
+
     for (auto client : clients)
     {
         std::cout << "SOCK: " << client.first << " USERNAME: " << client.second << std::endl;
-        if (client.second.find("BACKUP") == std::string::npos)
-        {
-            std::cout << "removendo: " << client.second << std::endl;
-            removeClient(client.first);
-            std::cout << "dps de remover" << std::endl;
-        }
+        std::cout << "removendo: " << client.second << std::endl;
+        removeClient(client.first);
+        std::cout << "dps de remover" << std::endl;
     }
 
     std::cout << "printando dps de remover: " << std::endl;
