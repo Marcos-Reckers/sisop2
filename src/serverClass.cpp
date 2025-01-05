@@ -521,7 +521,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 else if (packet[0].get_type() == 6)
                 {
                     std::cout << "ENVIANDO CLIENTES PRO BACKUP" << std::endl;
-
                     vector<int> backup_sockets = getUserSockets("BACKUP");
                     cout << "backup_sockets size: " << backup_sockets.size() << endl;
                     for (auto backup : backup_sockets)
@@ -531,6 +530,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
                     for (auto socket : backup_sockets)
                     {
+                        send_username(client_sock, socket);
                         for (auto pkt : packet)
                         {
                             std::vector<uint8_t> packet_bytes = Packet::packet_to_bytes(pkt);
@@ -900,7 +900,8 @@ void Server::create_sync_dir(int client_fd)
 
 void Server::handle_sync(int &client_sock, std::string &folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
-    // std::cout << "LIDANDO COM SYNC" << std::endl;
+    std::cout << "LIDANDO COM SYNC" << std::endl;
+    std::cout << "folder_name: " << folder_name << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
