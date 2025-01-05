@@ -694,6 +694,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 received_packet.clean_payload();
                 string payload = received_packet.get_payload_as_string();
                 cout << "RECEBENDO O USERNAME: " << payload << endl;
+                
+                payload = payload.substr(9, payload.size());
                 this->temp_username = payload;
                 this->new_folder_name = "sync_dir_" + temp_username;
                 FileInfo::create_dir(this->new_folder_name);
