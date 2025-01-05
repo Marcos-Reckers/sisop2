@@ -938,6 +938,7 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
                     cout << "Enviando delete_broadcast: " << file_name << endl;
                     auto pkts = FileInfo::create_packet_vector("delete_broadcast", file_name);
                     send_queue.produce(pkts);
+                    
                     std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
                 }
             }
