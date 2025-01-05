@@ -105,6 +105,7 @@ vector<FileInfo> FileInfo::receive_list_server(std::vector<Packet> packets)
 
 vector<FileInfo> FileInfo::list_files(string path)
 {
+    std::cout << "caminho: " << path << std::endl;
 
     vector<FileInfo> files = {};
     if (std::filesystem::is_empty(path))
@@ -114,13 +115,10 @@ vector<FileInfo> FileInfo::list_files(string path)
     }
     else
     {
-        //verifica se é uma pasta
-        if (!std::filesystem::is_directory(path))
-        {
-            std::cerr << "O caminho fornecido não é um diretório." << std::endl;
-            return files;
-        }
         
+        cout << "Listando arquivos da pasta: " << path << endl;
+        
+
         for (const auto &entry : std::filesystem::directory_iterator(path))
         {
             FileInfo file_info;
@@ -493,7 +491,13 @@ vector<Packet> FileInfo::create_packet_vector(string command, string file_path_o
         pkt_files.insert(pkt_files.begin(), pkt_cmd);
         return pkt_files;
     }
-    else if (command == "list_server" || "list_client" || "exit" || "get_sync_dir")
+    else if (command == "list_server")
+    {
+        vector<Packet> solo_pkt;
+        solo_pkt.push_back(pkt_cmd);
+        return solo_pkt;
+    }
+    else if (command == "list_client" || "exit" || "get_sync_dir")
     {
         vector<Packet> solo_pkt;
         solo_pkt.push_back(pkt_cmd);

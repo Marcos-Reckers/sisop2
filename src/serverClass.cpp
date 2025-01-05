@@ -117,6 +117,7 @@ void Server::acceptClients()
             // handle_communication igual do cliente
 
             std::cout << "Conexão aceita de: " << username_str << std::endl;
+            this->temp_username = username_str;
         }
         else
         {
