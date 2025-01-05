@@ -175,7 +175,26 @@ void Server::connect_server(string main_ip_address, string main_port)
                     std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
                     std::thread maintain_connection(&Server::heartbeat, this, this->new_backup_sock);
                     maintain_connection.join();
-                    last_backup();
+                    bully_mutex.lock();
+                    bully();
+                    bully_mutex.unlock();
+                    if (this->type == "-p")
+                    {
+                        std::cout << "Sou um servidor principal" << endl;
+
+                        clients_info.erase(std::remove_if(
+                                               clients_info.begin(), clients_info.end(), [this](const ClientInfo &client)
+                                               { return client.username == this->backup_name; }),
+                                           clients_info.end());
+
+                        for (auto client : clients_info)
+                        {
+                            std::cout << "client_info: " << client.username << std::endl;
+                        }
+
+                        thread connecting_to_clients(&Server::connect_clients, this);
+                        connecting_to_clients.join();
+                    }
 
                     betinha.join();
                 }
@@ -1041,7 +1060,9 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
 {
     if (backup_bully_info.empty())
     {
-        std::cout << "backup_bully_info vazio deu pau" << std::endl;
+        std::cout << "backup_bully_info vazio sou o ultimo backup" << std::endl;
+        this->type = "-p";
+        return;
     }
 
     for (auto backup : backup_bully_info)
@@ -1207,26 +1228,26 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     return client_info;
 }
 
-void Server::last_backup()
-{
-    std::cout << "Sou um servidor principal" << endl;
-    this->type = "-p";
+// void Server::last_backup()
+// {
+//     std::cout << "Sou um servidor principal" << endl;
+//     this->type = "-p";
 
-    for (auto client : clients)
-    {
-        if (client.second.find("BACKUP") != std::string::npos)
-        {
-            clients.erase(client.first);
-        }
-    }
-    clients_info.erase(std::remove_if(
-                                           clients_info.begin(), clients_info.end(), [this](const ClientInfo &client)
-                                           { return client.username == this->backup_name; }),
-                                       clients_info.end());
+//     for (auto client : clients)
+//     {
+//         if (client.second.find("BACKUP") != std::string::npos)
+//         {
+//             clients.erase(client.first);
+//         }
+//     }
+//     clients_info.erase(std::remove_if(
+//                                            clients_info.begin(), clients_info.end(), [this](const ClientInfo &client)
+//                                            { return client.username == this->backup_name; }),
+//                                        clients_info.end());
 
-    thread connecting_to_clients(&Server::connect_clients, this);
-    connecting_to_clients.join();
-}
+//     thread connecting_to_clients(&Server::connect_clients, this);
+//     connecting_to_clients.join();
+// }
 
 // void Server::answer(int backup_sock)
 // {
