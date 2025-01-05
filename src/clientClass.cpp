@@ -52,6 +52,9 @@ void Client::handle_connection()
         Threads::AtomicQueue<std::vector<Packet>> received_queue;
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
+
+        std::cout << "NEW FOLDER NAME: " << new_folder_name << std::endl;
+
         int porta = 8080;
         active_threads.emplace_back(&Client::heartbeat, this, porta);
 
@@ -269,6 +272,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
 {
     std::lock_guard<std::mutex> lock(initial_sync_mutex);
     send_queue.produce(FileInfo::create_packet_vector("get_sync_dir"));
+    std::cout << "criando dir: " << new_folder_name << std::endl;
     FileInfo::create_dir(new_folder_name);
 
     send_queue.produce(FileInfo::create_packet_vector("list_server"));
@@ -511,6 +515,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
 void Client::monitor_sync_dir(string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, set<string> &synced_files)
 {
 
+    std::cout << "criando dir: " << folder_name << std::endl;
     FileInfo::create_dir(folder_name);
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
