@@ -762,7 +762,7 @@ void Server::handle_communication(int client_sock)
 
         // cria as threds
         //  ===================================================================
-        auto client_folder = this->new_folder_name;
+        auto &client_folder = this->new_folder_name;
         // cria thread de comandos
         std::thread command_thread([&client_sock, &client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
@@ -898,10 +898,10 @@ void Server::create_sync_dir(int client_fd)
     }
 }
 
-void Server::handle_sync(int &client_sock, std::string &folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
     std::cout << "LIDANDO COM SYNC" << std::endl;
-    std::cout << "folder_name: " << folder_name << std::endl;
+    std::cout << "folder_name: " << new_folder_name << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
     while (client_sock > 0)
@@ -914,9 +914,9 @@ void Server::handle_sync(int &client_sock, std::string &folder_name, Threads::At
 
             if (cmd == "upload_sync")
             {
-                string file_name = FileInfo::receive_file(packets, folder_name);
+                string file_name = FileInfo::receive_file(packets, new_folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
-                string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
 
                 if (this->type == "-p")
                 {
@@ -929,7 +929,7 @@ void Server::handle_sync(int &client_sock, std::string &folder_name, Threads::At
             {
                 FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
-                string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
                 cout << "Delete recebido para o arquvio: " << file_name << endl;
 
                 if (this->type == "-p")
