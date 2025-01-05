@@ -1058,6 +1058,13 @@ void Server::bully()
 
 void Server::election(std::map<int, sockaddr_in> backup_bully_info)
 {
+
+    std::cout << "BACKUP BULLY INFO: " << std::endl;
+    for (auto backup : backup_bully_info)
+    {
+        std::cout << "BACKUP: " << backup.first << " ADDR: " << inet_ntoa(backup.second.sin_addr) << std::endl;
+    }
+
     if (backup_bully_info.empty())
     {
         std::cout << "backup_bully_info vazio sou o ultimo backup" << std::endl;
