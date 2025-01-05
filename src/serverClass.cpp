@@ -172,6 +172,21 @@ void Server::connect_server(string main_ip_address, string main_port)
                 if (this->type == "-b")
                 {
                     std::cout << "Sou um backup" << endl;
+
+                    int recebido_betinha = 0;
+                    char buffer_betinha[3];
+
+                    while (recebido_betinha == 0)
+                    {
+                        recebido_betinha = recv(bully_curr_sock, buffer_betinha, 3, 0);
+                    }
+
+                    cout << "recebido: " << endl;
+                    for (auto c : buffer_betinha)
+                    {
+                        std::cout << c;
+                    }
+
                     std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
                     std::thread maintain_connection(&Server::heartbeat, this, this->new_backup_sock);
                     maintain_connection.join();
@@ -188,11 +203,6 @@ void Server::connect_server(string main_ip_address, string main_port)
                                                { return client.username == this->backup_name; }),
                                            clients_info.end());
 
-                        for (auto client : clients_info)
-                        {
-                            std::cout << "client_info: " << client.username << std::endl;
-                        }
-                        sleep(3);
                         thread connecting_to_clients(&Server::connect_clients, this);
                         connecting_to_clients.join();
                     }
@@ -382,8 +392,6 @@ void Server::heartbeat(int bully_curr_sock)
             std::cout << "HEARTBEAT PAROU" << std::endl;
             break;
         }
-        std::cout << "HEARTBEAT VIVO!" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(5));
     }
     return;
 }
@@ -485,7 +493,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
                     vector<int> backup_sockets = getUserSockets("BACKUP");
                     cout << "backup_sockets size: " << backup_sockets.size() << endl;
-                    for(auto backup : backup_sockets){
+                    for (auto backup : backup_sockets)
+                    {
                         cout << "backup: " << backup << endl;
                     }
 
