@@ -1211,6 +1211,19 @@ void Server::last_backup()
 {
     std::cout << "Sou um servidor principal" << endl;
     this->type = "-p";
+
+    for (auto client : clients)
+    {
+        if (client.second.find("BACKUP") != std::string::npos)
+        {
+            clients.erase(client.first);
+        }
+    }
+    clients_info.erase(std::remove_if(
+                                           clients_info.begin(), clients_info.end(), [this](const ClientInfo &client)
+                                           { return client.username == this->backup_name; }),
+                                       clients_info.end());
+
     thread connecting_to_clients(&Server::connect_clients, this);
     connecting_to_clients.join();
 }
