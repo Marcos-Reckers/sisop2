@@ -18,7 +18,8 @@ private:
     std::vector<std::thread> active_threads;
     bool running;
     sockaddr_in client_addr;  
-
+    string new_folder_name;
+    
 public:
     set<string> synced_files;
     Client(string username, struct hostent *server, string server_port);

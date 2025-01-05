@@ -1,6 +1,8 @@
 #include "clientClass.h"
 
-Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port), sock(), synced_files() {}
+Client::Client(string username, struct hostent *server, string server_port) : username(username), server(server), server_port(server_port), sock(), synced_files() {
+    this->new_folder_name = "sync_dir_" + username;
+}
 
 void Client::set_sock(int sock) { this->sock = sock; }
 
@@ -71,18 +73,9 @@ void Client::handle_connection()
         get_sync_dir(send_queue, received_queue);
         cout << "Sincronização inicial concluída." << endl;
         //  ===================================================================
-        //  criathread de sync
-        // std::thread sync_thread([this, &sync_queue]()
-        //                         { this->handle_sync(sync_queue, "sync_dir", synced_files); });
-
-        active_threads.emplace_back(&Client::handle_sync, this, std::ref(sync_queue), "sync_dir", std::ref(synced_files));
-
-        // cria thread de monitoramento
-        // std::thread monitor_thread([this, &send_queue]()
-        //                            { this->monitor_sync_dir("sync_dir", send_queue, synced_files); });
+        active_threads.emplace_back(&Client::handle_sync, this, std::ref(sync_queue), new_folder_name, std::ref(synced_files));
         // ===================================================================
-
-        active_threads.emplace_back(&Client::monitor_sync_dir, this, "sync_dir", std::ref(send_queue), std::ref(synced_files));
+        active_threads.emplace_back(&Client::monitor_sync_dir, this, new_folder_name, std::ref(send_queue), std::ref(synced_files));
 
         for (auto &thread : active_threads)
         {
@@ -276,7 +269,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
 {
     std::lock_guard<std::mutex> lock(initial_sync_mutex);
     send_queue.produce(FileInfo::create_packet_vector("get_sync_dir"));
-    FileInfo::create_dir("sync_dir");
+    FileInfo::create_dir(new_folder_name);
 
     send_queue.produce(FileInfo::create_packet_vector("list_server"));
     vector<Packet> packets = received_queue.consume_blocking();
@@ -284,7 +277,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
     // FileInfo::print_list_files(server_files);
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-    std::string path = exec_path + "/" + "sync_dir";
+    std::string path = exec_path + "/" + new_folder_name;
     vector<FileInfo> client_files = FileInfo::list_files(path);
 
     vector<FileInfo> files_to_upload;
@@ -345,7 +338,7 @@ void Client::get_sync_dir(Threads::AtomicQueue<std::vector<Packet>> &send_queue,
     {
         send_queue.produce(FileInfo::create_packet_vector("download", file.get_file_name()));
         auto download_packets = received_queue.consume_blocking();
-        FileInfo::receive_file(download_packets, "sync_dir");
+        FileInfo::receive_file(download_packets, new_folder_name);
         synced_files.insert(file.get_file_name());
         cout << "Arquivo recebido com sucesso." << endl;
     }
@@ -495,7 +488,7 @@ void Client::send_commands(Threads::AtomicQueue<std::vector<Packet>> &send_queue
         else if (cmd.rfind("list_client", 0) == 0)
         {
             std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
-            std::string path = exec_path + "/" + "sync_dir";
+            std::string path = exec_path + "/" + new_folder_name;
             vector<FileInfo> files = FileInfo::list_files(path);
             FileInfo::print_list_files(files);
         }
