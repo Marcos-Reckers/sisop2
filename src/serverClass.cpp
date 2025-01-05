@@ -933,9 +933,9 @@ void Server::handle_sync(int &client_sock, std::string folder_name, Threads::Ato
                 add_client_mutex.lock();
                 addClient(client.sock, client.username);
                 add_client_mutex.unlock();
-                if (getUsername(client_sock).find("BACKUP") == std::string::npos)
+                if (client.username.find("BACKUP") == std::string::npos)
                 {
-                    create_sync_dir(client_sock);
+                    create_sync_dir(client.sock);
                 }
             }
         }
