@@ -105,14 +105,19 @@ void Client::wait_connection(int porta)
         return;
     }
 
-    int opt = 1;
-    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+        int enable = 1;
+    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
     {
-        std::cerr << "Erro ao configurar SO_REUSEADDR." << std::endl;
-        close(new_sock);
+        std::cerr << "Erro ao setar opções do socket." << std::endl;
         return;
     }
-    std::cout << "antes de definir a porta"<< std::endl;
+    #ifdef SO_REUSEPORT
+    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
+    {
+        std::cerr << "Erro ao setar opções do socket." << std::endl;
+        return;
+    }
+    #endif
 
     memset(&client_addr, 0, sizeof(client_addr));
     client_addr.sin_family = AF_INET;
@@ -143,7 +148,7 @@ void Client::wait_connection(int porta)
     // this->running = true;
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
-    active_threads.emplace_back(&Client::heartbeat, this, 8081);
+    active_threads.emplace_back(&Client::heartbeat, this, 8080);
 }
 
 int16_t Client::connect_to_server()
@@ -156,6 +161,20 @@ int16_t Client::connect_to_server()
         cout << "Erro ao criar socket" << endl;
         return -1;
     }
+
+        int enable = 1;
+    if (setsockopt(curr_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    {
+        std::cerr << "Erro ao setar opções do socket." << std::endl;
+        return false;
+    }
+    #ifdef SO_REUSEPORT
+    if (setsockopt(curr_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
+    {
+        std::cerr << "Erro ao setar opções do socket." << std::endl;
+        return false;
+    }
+    #endif
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(atoi(server_port.c_str()));
