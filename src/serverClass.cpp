@@ -693,6 +693,9 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 string payload = received_packet.get_payload_as_string();
                 cout << "RECEBENDO O USERNAME: " << payload << endl;
                 this->temp_username = payload;
+                this->new_folder_name = "sync_dir_" + temp_username;
+                FileInfo::create_dir(this->new_folder_name);
+
             }
 
             else
@@ -755,12 +758,12 @@ void Server::handle_communication(int client_sock)
 
         // cria as threds
         //  ===================================================================
-        auto client_folder = "sync_dir_" + getUsername(client_sock);
+        auto client_folder = this->new_folder_name;
         // cria thread de comandos
-        std::thread command_thread([&client_sock, client_folder, &send_queue, &received_queue]()
+        std::thread command_thread([&client_sock, &client_folder, &send_queue, &received_queue]()
                                    { Server::handle_commands(client_sock, client_folder, send_queue, received_queue); });
         //  criathread de sync
-        std::thread sync_thread([this, &client_sock, client_folder, &send_queue, &sync_queue]()
+        std::thread sync_thread([this, &client_sock, &client_folder, &send_queue, &sync_queue]()
                                 { this->handle_sync(client_sock, client_folder, send_queue, sync_queue); });
 
         if (getUsername(client_sock).find("BACKUP") == std::string::npos && !clients_info.empty() && this->type == "-p")
@@ -815,7 +818,7 @@ string Server::create_string_from_client_info(vector<ClientInfo> &clients_info)
     return clients_info_str;
 }
 
-void Server::handle_commands(int &client_sock, string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
+void Server::handle_commands(int &client_sock, string &new_folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &received_queue)
 {
     std::cout << "A thread para lidar com comandos no servidor está executando." << std::endl;
     string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
@@ -834,9 +837,9 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             }
             else if (cmd == "upload")
             {
-                string file_name = FileInfo::receive_file(packets, folder_name);
+                string file_name = FileInfo::receive_file(packets, new_folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
-                string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
                 cout << "Arquivo pronto para envio via upload_sync: " << file_path << endl;
                 auto pkts = FileInfo::create_packet_vector("upload_sync", file_path);
                 send_queue.produce(pkts);
@@ -845,7 +848,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             {
                 FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
-                string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
                 auto pkts = FileInfo::create_packet_vector("download_response", file_path);
                 send_queue.produce(pkts);
                 std::cout << "Arquivo enviado: " << file_name << std::endl;
@@ -854,7 +857,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             {
                 FileInfo file_info = FileInfo::receive_file_info(packets);
                 string file_name = file_info.get_file_name();
-                string file_path = exec_path + "/" + folder_name + "/" + file_name;
+                string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
                 cout << "Enviando delete_sync: " << file_name << endl;
                 auto pkts = FileInfo::create_packet_vector("delete_sync", file_name);
                 send_queue.produce(pkts);
@@ -863,7 +866,7 @@ void Server::handle_commands(int &client_sock, string folder_name, Threads::Atom
             }
             else if (cmd == "list_server")
             {
-                string folder_path = exec_path + "/" + folder_name;
+                string folder_path = exec_path + "/" + new_folder_name;
                 auto pkts = FileInfo::create_packet_vector("list_server_response", folder_path);
                 send_queue.produce(pkts);
             }
@@ -891,7 +894,7 @@ void Server::create_sync_dir(int client_fd)
     }
 }
 
-void Server::handle_sync(int &client_sock, std::string folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
+void Server::handle_sync(int &client_sock, std::string &folder_name, Threads::AtomicQueue<std::vector<Packet>> &send_queue, Threads::AtomicQueue<std::vector<Packet>> &sync_queue)
 {
     // std::cout << "LIDANDO COM SYNC" << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();

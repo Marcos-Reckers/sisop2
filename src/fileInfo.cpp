@@ -37,7 +37,6 @@ void FileInfo::print()
 
 void FileInfo::create_dir(string dir_name)
 {
-    std::cout << "ESTOU DENTRO DE CREATE DIR, CRIANDO: " << dir_name << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     std::string full_path = exec_path + "/" + dir_name;
     if (!std::filesystem::exists(full_path))
