@@ -121,7 +121,7 @@ void Client::wait_connection(int porta)
     memset(&client_addr, 0, sizeof(client_addr));
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
-    client_addr.sin_port = htons(8080);
+    client_addr.sin_port = htons(porta);
     cout << "porta: "<< porta << endl;
     cout << "porta htons: "<< htons(porta) << endl;
     cout << "port: "<< port << endl;
