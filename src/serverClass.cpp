@@ -344,18 +344,20 @@ void Server::connect_clients()
                 std::cerr << "Erro ao setar opções do socket." << std::endl;
                 return;
             }
-#ifdef SO_REUSEPORT
+            #ifdef SO_REUSEPORT
             if (setsockopt(client_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
             {
                 std::cerr << "Erro ao setar opções do socket." << std::endl;
                 return;
             }
-#endif
+            #endif
 
             // Tenta conectar ao servidor por 100 segundos
             int attempts = 0;
+            sleep(1);
             while (attempts < 10)
             {
+                sleep(1);
                 if (connect(client_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
                 {
                     std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
