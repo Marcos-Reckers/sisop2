@@ -122,9 +122,8 @@ void Client::wait_connection(int porta)
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = INADDR_ANY;
     client_addr.sin_port = htons(porta);
+    
     cout << "porta: "<< porta << endl;
-    cout << "porta htons: "<< htons(porta) << endl;
-    cout << "port: "<< port << endl;
 
     if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
     {

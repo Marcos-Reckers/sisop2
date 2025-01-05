@@ -157,7 +157,6 @@ void Server::connect_server(string main_ip_address, string main_port)
             if (strcmp(buffer, "ok") == 0)
             {
                 std::cout << "Conexão estabelecida com o servidor principal" << endl;
-
                 thread maintain_connection(&Server::heartbeat, this, bully_curr_sock);
 
                 thread backup_communication(&Server::handle_communication, this, bully_curr_sock);
@@ -174,6 +173,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                 {
                     std::cout << "Sou um backup" << endl;
                     std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
+                    std::thread maintain_connection(&Server::heartbeat, this, this->new_backup_sock);
                     betinha.join();
                 }
 
@@ -285,6 +285,40 @@ void Server::connect_clients()
                     attempts++;
                 }
             }
+
+            client.addr.sin_port = htons(atoi("8081"));
+            // Tenta conectar ao servidor por 100 segundos
+            attempts = 0;
+            while (attempts < 10)
+            {
+                if (connect(client_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
+                {
+                    std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
+
+                    client.sock = client_sock;
+
+                    for (auto &client_map : clients)
+                    {
+                        if (client_map.second == client.username)
+                        {
+                            clients.erase(client_map.first);
+                            clients[client_sock] = client.username;
+                            break;
+                        }
+                    }
+
+                    client_threads.emplace_back(&Server::handle_communication, this, client_sock);
+
+                    break;
+                }
+                else
+                {
+                    cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
+                    sleep(1); // Aguarda 1 segundo antes de tentar novamente
+                    attempts++;
+                }
+            }
+
         }
     }
 }
