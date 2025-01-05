@@ -338,19 +338,19 @@ void Server::connect_clients()
                 return;
             }
 
-            int enable = 1;
-            if (setsockopt(client_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
-            {
-                std::cerr << "Erro ao setar opções do socket." << std::endl;
-                return;
-            }
-            #ifdef SO_REUSEPORT
-            if (setsockopt(client_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
-            {
-                std::cerr << "Erro ao setar opções do socket." << std::endl;
-                return;
-            }
-            #endif
+            // int enable = 1;
+            // if (setsockopt(client_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+            // {
+            //     std::cerr << "Erro ao setar opções do socket." << std::endl;
+            //     return;
+            // }
+            // #ifdef SO_REUSEPORT
+            // if (setsockopt(client_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
+            // {
+            //     std::cerr << "Erro ao setar opções do socket." << std::endl;
+            //     return;
+            // }
+            // #endif
 
             // Tenta conectar ao servidor por 100 segundos
             int attempts = 0;
