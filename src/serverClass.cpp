@@ -262,7 +262,6 @@ void Server::connect_clients()
     // servidor vai atrás dos clientes no clients_info
     // connect pra cada um deles
     // abre todas as threads pra cada um deles
-
     std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
 
     for (auto client : clients_info)
@@ -309,8 +308,6 @@ void Server::connect_clients()
                     }
 
                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
-
-                    return;
                 }
                 else
                 {
@@ -341,8 +338,6 @@ void Server::connect_clients()
                     }
 
                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
-
-                    break;
                 }
                 else
                 {
