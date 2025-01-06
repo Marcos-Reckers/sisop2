@@ -94,7 +94,9 @@ void Server::acceptClients()
             }
 
             cout << "MANDANDO OK PARA: " << username_str << endl;
-            send(client_fd, "ok", 2, 0);
+
+            // MUDEI OK PRA SIZE = 3 ANTES ERA SIZE=2
+            send(client_fd, "ok", 3, 0);
 
             add_client_mutex.lock();
 
@@ -214,6 +216,7 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                     while (recebido_betinha == 0)
                     {
+                        std::cout << "dentro do while do recebido_betinha" << std::endl;
                         recebido_betinha = recv(bully_curr_sock, buffer_betinha, 3, 0);
                     }
 
