@@ -105,7 +105,7 @@ vector<FileInfo> FileInfo::receive_list_server(std::vector<Packet> packets)
 
 vector<FileInfo> FileInfo::list_files(string path)
 {
-    std::cout << "caminho: " << path << std::endl;
+
 
     vector<FileInfo> files = {};
     if (std::filesystem::is_empty(path))
@@ -116,7 +116,6 @@ vector<FileInfo> FileInfo::list_files(string path)
     else
     {
         
-        cout << "Listando arquivos da pasta: " << path << endl;
         
 
         for (const auto &entry : std::filesystem::directory_iterator(path))

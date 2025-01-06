@@ -55,8 +55,7 @@ Packet Packet::bytes_to_packet(std::vector<uint8_t> &bytes)
     std::memcpy(&pkt.payload_size, ptr, sizeof(pkt.payload_size));
     ptr += sizeof(pkt.payload_size);
 
-    cout << "Bytes Size: " << bytes.size() << endl;
-    cout << "Payload size: " << pkt.payload_size << endl;
+
 
     if (pkt.payload_size > 0)
     {
@@ -229,10 +228,7 @@ void Packet::print() const
 {
     string dirty_payload = get_payload_as_string();
     string clean_payload = dirty_payload.substr(0, dirty_payload.find('|'));
-    std::cout << "Type: " << type << "\n";
-    std::cout << "SeqNum: " << seqn << "\n";
-    std::cout << "Total size: " << total_pakets << "\n";
-    std::cout << "Length: " << payload_size << "\n";
+
     // std::cout << "Payload: " << clean_payload << "\n";
 }
 

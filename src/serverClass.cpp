@@ -167,7 +167,6 @@ void Server::connect_server(string main_ip_address, string main_port)
     int attempts = 0;
     while (attempts < 10)
     {
-        std::cout << "Dentro do while connect_server" << endl;
         if (connect(bully_curr_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == 0)
         {
             std::string username_with_null = this->backup_name;
@@ -178,12 +177,6 @@ void Server::connect_server(string main_ip_address, string main_port)
             while (recebido == 0)
             {
                 recebido = recv(bully_curr_sock, buffer, 3, 0);
-            }
-
-            cout << "recebido primeiro ok: " << endl;
-            for (auto c : buffer)
-            {
-                std::cout << c;
             }
 
             if (strstr(buffer, "ok") != NULL)
@@ -203,7 +196,6 @@ void Server::connect_server(string main_ip_address, string main_port)
 
                 if (this->type == "-b")
                 {
-                    std::cout << "Sou um backup" << endl;
 
                     // std::cout << "VOU DAR SLEEP" << std::endl;
 
@@ -258,11 +250,6 @@ void Server::connect_server(string main_ip_address, string main_port)
                                            { return client.username == this->backup_name; }),
                                        clients_info.end());
 
-                    for (auto client : clients_info)
-                    {
-                        std::cout << "client_info: " << client.username << std::endl;
-                    }
-
                     thread connecting_to_clients(&Server::connect_clients, this);
                     connecting_to_clients.join();
                 }
@@ -300,9 +287,6 @@ void Server::connect_clients()
     // servidor vai atrás dos clientes no clients_info
     // connect pra cada um deles
     // abre todas as threads pra cada um deles
-    std::cout << "tamanho do clients_info: " << clients_info.size() << std::endl;
-
-    std::cout << "REMOVENDO TODOS MENOS BACKUP DA CLIENTS" << std::endl;
 
     clients.clear();
 
@@ -314,16 +298,8 @@ void Server::connect_clients()
         }
     }
 
-    std::cout << "printando dps de remover: " << std::endl;
-    for (auto client : clients)
-    {
-        std::cout << "SOCK: " << client.first << " USERNAME: " << client.second << std::endl;
-    }
-
     for (auto client : clients_info)
     {
-
-        std::cout << "TENTANDO SE CONECTAR COM O CLIENTE: " << std::endl;
 
         char client_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(client.addr.sin_addr), client_ip, INET_ADDRSTRLEN);
@@ -387,7 +363,6 @@ void Server::connect_clients()
         }
     }
 
-    std::cout << "printando dps DE TUDOOOOO " << std::endl;
     for (auto client : clients)
     {
         std::cout << "SOCK: " << client.first << " USERNAME: " << client.second << std::endl;
@@ -470,7 +445,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                             {
                                 std::cerr << "Erro ao enviar pacote." << std::endl;
                             }
-                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
                         }
                     }
 
@@ -509,7 +483,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         {
                             std::cerr << "Erro ao enviar pacote." << std::endl;
                         }
-                        std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
+                        
                     }
                     continue;
                 }
@@ -524,7 +498,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                         {
                             std::cerr << "Erro ao enviar pacote." << std::endl;
                         }
-                        std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via response" << std::endl;
+                        
                     }
                     continue;
                 }
@@ -533,10 +507,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                     std::cout << "ENVIANDO CLIENTES PRO BACKUP" << std::endl;
                     vector<int> backup_sockets = getUserSockets("BACKUP");
                     cout << "backup_sockets size: " << backup_sockets.size() << endl;
-                    for (auto backup : backup_sockets)
-                    {
-                        cout << "backup: " << backup << endl;
-                    }
+
 
                     for (auto socket : backup_sockets)
                     {
@@ -549,7 +520,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                             {
                                 std::cerr << "Erro ao enviar pacote." << std::endl;
                             }
-                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+                            
                         }
                     }
 
@@ -575,7 +546,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                             {
                                 std::cerr << "Erro ao enviar pacote." << std::endl;
                             }
-                            std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
+                            
                         }
                     }
                     for (auto client : clients)
@@ -592,7 +563,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                                 {
                                     std::cerr << "Erro ao enviar pacote." << std::endl;
                                 }
-                                std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << std::endl;
+                                
                             }
                         }
                     }
@@ -627,12 +598,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 auto packet_client_info = FileInfo::create_packet_vector(packet_string);
                 send_queue.produce(packet_client_info);
                 std::cout << "Pacote criado do client_info e enviado pra fila" << std::endl;
-
-                std::cout << "Printando o pacote do client_info" << std::endl;
-                for (auto pkt : packet_client_info)
-                {
-                    pkt.print();
-                }
             }
 
             // aqui esta o perigo
@@ -655,31 +620,16 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
         else if (received_bytes > 0)
         {
             Packet received_packet = Packet::bytes_to_packet(packet_bytes);
-            cout << "Recebeu pacote " << received_packet.get_seqn() << "/" << received_packet.get_total_packets() << " de tamanho: " << received_bytes << endl;
-            cout << "pacote recebido: ";
-            received_packet.print();
-            cout << endl;
-
-            std::sort(packets_to_recv_queue.begin(), packets_to_recv_queue.end(), [](Packet &a, Packet &b)
-                      { return a.get_seqn() < b.get_seqn(); });
-
-            std::cout << "printando vetor ordenado " << std::endl;
-            for (auto pkt : packets_to_recv_queue)
-            {
-                pkt.print();
-            }
-
-            std::cout << "a comparacao eh " << packets_to_recv_queue.size() << "== " << received_packet.get_total_packets() << std::endl;
 
             if (received_packet.get_type() == 1)
             {
-                if (packets_to_recv_queue.size() == received_packet.get_total_packets() - 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
                     packets_to_recv_queue.clear();
                 }
-                else if (received_packet.get_seqn() <= received_packet.get_total_packets())
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                 }
@@ -801,12 +751,6 @@ void Server::handle_communication(int client_sock)
             auto packet_client_info = FileInfo::create_packet_vector(packet_string);
             send_queue.produce(packet_client_info);
             std::cout << "Pacote criado do client_info e enviado pra fila" << std::endl;
-
-            std::cout << "Printando o pacote do client_info" << std::endl;
-            for (auto pkt : packet_client_info)
-            {
-                pkt.print();
-            }
         }
 
         // std::cout << "depois do if do cliente != backup" << std::endl;
@@ -1082,7 +1026,6 @@ int Server::connect_backup_servers()
         // Aceita a conexão do cliente
         int backup_fd = accept(server_fd, (struct sockaddr *)&backup_addr, &backup_addr_len);
 
-        std::cout << "BACKUP FD: " << backup_fd << std::endl;
 
         if (backup_fd >= 0)
         {
@@ -1102,7 +1045,6 @@ int Server::connect_backup_servers()
 void Server::bully()
 {
 
-    std::cout << "ENTREI NO BULLY" << std::endl;
     // map entre addr e bully_number de backup;
     std::map<int, sockaddr_in> backup_bully_info;
 
@@ -1180,8 +1122,6 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
         {
             // connect and send
             int backup_sock = connect_to_backup(backup.second);
-            std::cout << "Sai do connect_to_backup" << std::endl;
-            std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
 
             this->new_backup_sock = backup_sock;
             // cout << "mandando ok" << endl;
@@ -1231,8 +1171,6 @@ int Server::connect_to_backup(sockaddr_in &backup_addr)
     {
         if (connect(bully_curr_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) == 0)
         {
-            cout << "DO BACKUP TENTANDO CONECTAR: Conectado ao backup!" << endl;
-            std::cout << "A SOCK DO BACKUP EH: " << bully_curr_sock << std::endl;
 
             return bully_curr_sock;
         }
@@ -1265,13 +1203,13 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
     int enable = 1;
     if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
     {
-        std::cerr << "Erro ao setar opções do socket." << std::endl;
+
         return tmp;
     }
 #ifdef SO_REUSEPORT
     if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
     {
-        std::cerr << "Erro ao setar opções do socket." << std::endl;
+
         return tmp;
     }
 #endif
@@ -1283,16 +1221,14 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 
     if (bind(new_sock, (struct sockaddr *)&backup_addr, sizeof(backup_addr)) < 0)
     {
-        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao fazer o bind na porta: " << backup_addr.sin_port << "." << std::endl;
     }
     else
     {
-        std::cout << "DO BACKUP ESPERANDO CONEXÃO: Bind realizado com sucesso na porta: " << port << std::endl;
     }
 
     if (listen(new_sock, 1) < 0)
     {
-        std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao colocar o servidor em modo de escuta." << std::endl;
+
         close(new_sock);
         return tmp;
     }
@@ -1303,16 +1239,13 @@ ClientInfo Server::wait_connect_from_backup(sockaddr_in &backup_addr)
 
     while (true)
     {
-        std::cout << "tentando aceitar conexao: " << std::endl;
         bully_sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
         if (bully_sock >= 0)
         {
-            std::cout << "DO BACKUP ESPERANDO CONEXÃO: Conectou um novo servidor na sock: " << bully_sock << std::endl;
             break;
         }
         else
         {
-            std::cerr << "DO BACKUP ESPERANDO CONEXÃO: Erro ao aceitar conexão. Tentando novamente..." << std::endl;
             sleep(1); // Aguarda 1 segundo antes de tentar novamente
         }
     }
@@ -1336,7 +1269,6 @@ void Server::send_username(int client_sock, int socket)
         {
             std::cerr << "Erro ao enviar pacote." << std::endl;
         }
-        std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
     }
 }
 

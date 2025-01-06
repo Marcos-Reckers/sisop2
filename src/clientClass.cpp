@@ -53,7 +53,6 @@ void Client::handle_connection()
         Threads::AtomicQueue<std::vector<Packet>> sync_queue;
         // ===================================================================
 
-        std::cout << "NEW FOLDER NAME: " << new_folder_name << std::endl;
 
         int porta = 8080;
         active_threads.emplace_back(&Client::heartbeat, this, porta);
@@ -72,9 +71,9 @@ void Client::handle_connection()
 
         // pega os arquivos do servidor e do cliente e sincroniza
         // ===================================================================
-        cout << "Sincronizando diretórios..." << endl;
+ 
         get_sync_dir(send_queue, received_queue);
-        cout << "Sincronização inicial concluída." << endl;
+    
         //  ===================================================================
         active_threads.emplace_back(&Client::handle_sync, this, std::ref(sync_queue), new_folder_name, std::ref(synced_files));
         // ===================================================================
@@ -124,7 +123,6 @@ void Client::wait_connection(int porta)
     client_addr.sin_addr.s_addr = INADDR_ANY;
     client_addr.sin_port = htons(porta);
     
-    cout << "porta: "<< porta << endl;
 
     if (bind(new_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0)
     {
@@ -147,7 +145,7 @@ void Client::wait_connection(int porta)
     this->sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
     close(new_sock);
 
-    std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
+    std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << std::endl;
 }
 
 int16_t Client::connect_to_server()
