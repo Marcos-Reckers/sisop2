@@ -145,10 +145,9 @@ void Client::wait_connection(int porta)
     sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
     this->sock = accept(new_sock, (struct sockaddr *)&server_addr, &server_len);
-    // this->running = true;
+    close(new_sock);
 
     std::cout << "CONECTOU NUM NOVO SERVIDOR NA SOCK: " << this->sock << std::endl;
-    active_threads.emplace_back(&Client::heartbeat, this, 8080);
 }
 
 int16_t Client::connect_to_server()
@@ -669,7 +668,6 @@ void Client::heartbeat(int port)
             std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
             // this->running = false;
             wait_connection(port);
-            return;
         }
     }
     std::cout << "HEARTBEAT | RUNNING = FALSE" << std::endl;
