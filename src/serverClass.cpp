@@ -203,7 +203,12 @@ void Server::connect_server(string main_ip_address, string main_port)
                 {
                     std::cout << "Sou um backup" << endl;
 
-                    std::cout << "depois do backup" << std::endl;
+                    std::cout << "VOU DAR SLEEP" << std::endl;
+                
+                    sleep(5);
+
+                    std::cout << "DEI O SLEEP" << std::endl;
+
                     int recebido_betinha = 0;
                     char buffer_betinha[3];
 
@@ -391,7 +396,6 @@ bool Server::is_socket_open(int &bully_curr_sock)
     char buffer;
 
     int result = recv(bully_curr_sock, &buffer, 1, MSG_PEEK);
-    std::cout << "result da sock do servidor p servidor: " << result << std::endl;
 
     if (result == 0)
     {
