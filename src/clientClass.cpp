@@ -665,6 +665,7 @@ void Client::heartbeat(int port)
         std::this_thread::sleep_for(std::chrono::seconds(5));
         if (!this->is_socket_open())
         {
+            close(this->sock);
             std::cout << "Conexão com servidor encerrada. (HEARTBEAT)" << std::endl;
             // this->running = false;
             wait_connection(port);

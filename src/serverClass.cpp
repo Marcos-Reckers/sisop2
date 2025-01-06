@@ -421,6 +421,7 @@ void Server::heartbeat(int bully_curr_sock)
     {
         if (!this->is_socket_open(bully_curr_sock))
         {
+            // close(bully_curr_sock);
             std::cout << "HEARTBEAT PAROU" << std::endl;
             break;
         }
