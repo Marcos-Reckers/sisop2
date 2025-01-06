@@ -673,7 +673,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
 
             if (received_packet.get_type() == 1)
             {
-                if (packets_to_recv_queue.size() == received_packet.get_total_packets())
+                if (packets_to_recv_queue.size() == received_packet.get_total_packets() - 1)
                 {
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
