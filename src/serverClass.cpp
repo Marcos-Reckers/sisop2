@@ -206,7 +206,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                     std::cout << "Sou um backup" << endl;
 
                     // std::cout << "VOU DAR SLEEP" << std::endl;
-                
+
                     // sleep(5);
 
                     // std::cout << "DEI O SLEEP" << std::endl;
@@ -659,15 +659,27 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             cout << "pacote recebido: ";
             received_packet.print();
             cout << endl;
+
+            std::sort(packets_to_recv_queue.begin(), packets_to_recv_queue.end(), [](Packet &a, Packet &b)
+                      { return a.get_seqn() < b.get_seqn(); });
+
+            std::cout << "printando vetor ordenado " << std::endl;
+            for (auto pkt : packets_to_recv_queue)
+            {
+                pkt.print();
+            }
+
+            std::cout << "a comparacao eh " << packets_to_recv_queue.size() << "== " << received_packet.get_total_packets() << std::endl;
+
             if (received_packet.get_type() == 1)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets())
+                if (packets_to_recv_queue.size() == received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
                     packets_to_recv_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_packets())
+                else if (received_packet.get_seqn() <= received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                 }
@@ -704,12 +716,11 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 received_packet.clean_payload();
                 string payload = received_packet.get_payload_as_string();
                 cout << "RECEBENDO O USERNAME: " << payload << endl;
-                
+
                 payload = payload.substr(9, payload.size());
                 this->temp_username = payload;
                 this->new_folder_name = "sync_dir_" + temp_username;
                 FileInfo::create_dir(this->new_folder_name);
-
             }
 
             else
@@ -948,7 +959,7 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
                     cout << "Enviando delete_broadcast: " << file_name << endl;
                     auto pkts = FileInfo::create_packet_vector("delete_broadcast", file_name);
                     send_queue.produce(pkts);
-                    
+
                     std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
                 }
             }
@@ -1328,12 +1339,6 @@ void Server::send_username(int client_sock, int socket)
         std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
     }
 }
-
-
-
-
-
-
 
 // client.addr.sin_port = htons(atoi("8081"));
 //             // Tenta conectar ao servidor por 100 segundos
