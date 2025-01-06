@@ -963,6 +963,11 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
                     std::cout << "Arquivo deletado via sync: " << file_name << std::endl;
                 }
             }
+            else
+            {
+                std::cerr << "Comando inválido recebido." << std::endl;
+                cout << "comando:" << cmd << endl;
+            }
         }
         if (packets[0].get_type() == 6)
         {
