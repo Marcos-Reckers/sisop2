@@ -105,19 +105,19 @@ void Client::wait_connection(int porta)
         return;
     }
 
-    //     int enable = 1;
-    // if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
-    // {
-    //     std::cerr << "Erro ao setar opções do socket." << std::endl;
-    //     return;
-    // }
-    // #ifdef SO_REUSEPORT
-    // if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
-    // {
-    //     std::cerr << "Erro ao setar opções do socket." << std::endl;
-    //     return;
-    // }
-    // #endif
+        int enable = 1;
+    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    {
+        std::cerr << "Erro ao setar opções do socket." << std::endl;
+        return;
+    }
+    #ifdef SO_REUSEPORT
+    if (setsockopt(new_sock, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0)
+    {
+        std::cerr << "Erro ao setar opções do socket." << std::endl;
+        return;
+    }
+    #endif
 
     memset(&client_addr, 0, sizeof(client_addr));
     client_addr.sin_family = AF_INET;
