@@ -223,7 +223,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                     maintain_connection.join();
                     bully_mutex.lock();
                     bully();
-                    sleep(3);
+                    // sleep(3);
                     bully_mutex.unlock();
                     if (this->type == "-p")
                     {
@@ -1153,10 +1153,10 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
                 }
             }
 
-            char buffer[3];
-            sleep(1);
-            recv(new_info.sock, buffer, 3, 0);
-            std::cout << "recebi: " << buffer << std::endl;
+            // char buffer[3];
+            // sleep(1);
+            // recv(new_info.sock, buffer, 3, 0);
+            // std::cout << "recebi: " << buffer << std::endl;
         }
         else
         {
@@ -1166,8 +1166,8 @@ void Server::election(std::map<int, sockaddr_in> backup_bully_info)
             std::cout << "BACKUP SOCK (betinha): " << backup_sock << std::endl;
 
             this->new_backup_sock = backup_sock;
-            cout << "mandando ok" << endl;
-            send(backup_sock, "ok", 3, 0);
+            // cout << "mandando ok" << endl;
+            // send(backup_sock, "ok", 3, 0);
         }
     }
 }
