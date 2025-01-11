@@ -676,13 +676,16 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             }
             else if (received_packet.get_type() == 2)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets())
+                std::cout << "COMPARAÇÃO: " << packets_to_recv_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
+                if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
                 {
-                    packets_to_sync_queue.push_back(received_packet);
+                    packets_to_recv_queue.push_back(received_packet);
+
+                    sort_packets(packets_to_sync_queue);
                     sync_queue.produce(packets_to_sync_queue);
                     packets_to_sync_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_packets())
+                else if (packets_to_recv_queue.size() < received_packet.get_total_packets()-1)
                 {
                     packets_to_sync_queue.push_back(received_packet);
                 }
@@ -1328,4 +1331,17 @@ void Server::send_username(int client_sock, int socket)
         }
         std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
     }
+}
+
+void Server::sort_packets(vector<Packet> &packets_to_recv_queue) {
+    const auto compare_packets = [](Packet &a, Packet &b)
+    { return a.get_seqn() < b.get_seqn(); };
+
+    std::sort(packets_to_recv_queue.begin(), packets_to_recv_queue.end(), compare_packets);
+
+    std::cout << "printando vetor ordenado " << std::endl;
+    for (auto pkt : packets_to_recv_queue)
+    {
+        pkt.print();
+    }  
 }

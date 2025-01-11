@@ -96,6 +96,7 @@ public:
 
     void last_backup();
     void send_username(int client_sock, int socket);
+    void sort_packets(vector<Packet> &packets_to_recv_queue);
 };
 
 #endif // SERVERCLASS_H
