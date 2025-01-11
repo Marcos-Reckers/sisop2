@@ -674,7 +674,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             }
             else if (received_packet.get_type() == 2)
             {
-
                 if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
