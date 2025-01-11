@@ -676,8 +676,10 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             {
                 if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
+                    cout<<"RECEBI TODOS OS PACOTES"<<endl;
                     packets_to_sync_queue.push_back(received_packet);
                     sync_queue.produce(packets_to_sync_queue);
+                    cout<<"PRODUZI NA SYNC QUEUE"<<endl;
                     packets_to_sync_queue.clear();
                 }
                 else if (received_packet.get_seqn() < received_packet.get_total_packets())
