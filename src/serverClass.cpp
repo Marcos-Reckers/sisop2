@@ -661,41 +661,51 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             cout << endl;
 
 
+
             if (received_packet.get_type() == 1)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets())
+                std::cout << "COMPARAÇÃO: " << packets_to_recv_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
+                if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
                 {
                     packets_to_recv_queue.push_back(received_packet);
+
+                    sort_packets(packets_to_recv_queue);
                     received_queue.produce(packets_to_recv_queue);
                     packets_to_recv_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_packets())
+                else if (packets_to_recv_queue.size() < received_packet.get_total_packets()-1)
                 {
                     packets_to_recv_queue.push_back(received_packet);
                 }
             }
             else if (received_packet.get_type() == 2)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets())
+                std::cout << "COMPARAÇÃO: " << packets_to_recv_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
+                if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
                 {
-                    packets_to_sync_queue.push_back(received_packet);
+                    packets_to_recv_queue.push_back(received_packet);
+
+                    sort_packets(packets_to_sync_queue);
                     sync_queue.produce(packets_to_sync_queue);
                     packets_to_sync_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_packets())
+                else if (packets_to_recv_queue.size() < received_packet.get_total_packets()-1)
                 {
                     packets_to_sync_queue.push_back(received_packet);
                 }
             }
             else if (received_packet.get_type() == 6)
             {
-                if (received_packet.get_seqn() == received_packet.get_total_packets())
+                std::cout << "COMPARAÇÃO: " << packets_to_recv_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
+                if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
                 {
-                    packets_to_sync_queue.push_back(received_packet);
+                    packets_to_recv_queue.push_back(received_packet);
+
+                    sort_packets(packets_to_sync_queue);
                     sync_queue.produce(packets_to_sync_queue);
                     packets_to_sync_queue.clear();
                 }
-                else if (received_packet.get_seqn() < received_packet.get_total_packets())
+                else if (packets_to_recv_queue.size() < received_packet.get_total_packets()-1)
                 {
                     packets_to_sync_queue.push_back(received_packet);
                 }
@@ -893,6 +903,19 @@ void Server::handle_commands(int &client_sock, string &new_folder_name, Threads:
             }
         }
     }
+}
+
+void Server::sort_packets(vector<Packet> &packets_to_recv_queue) {
+    const auto compare_packets = [](Packet &a, Packet &b)
+    { return a.get_seqn() < b.get_seqn(); };
+
+    std::sort(packets_to_recv_queue.begin(), packets_to_recv_queue.end(), compare_packets);
+
+    std::cout << "printando vetor ordenado " << std::endl;
+    for (auto pkt : packets_to_recv_queue)
+    {
+        pkt.print();
+    }  
 }
 
 void Server::create_sync_dir(int client_fd)

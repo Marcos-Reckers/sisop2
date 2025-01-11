@@ -82,6 +82,7 @@ public:
     int connect_to_backup(sockaddr_in &backup_addr);
     ClientInfo wait_connect_from_backup(sockaddr_in &backup_addr);
 
+    void sort_packets(vector<Packet> &packets);
 
     int connect_backup_servers();
 
