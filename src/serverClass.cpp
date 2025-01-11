@@ -419,7 +419,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
     vector<Packet> packets_to_recv_queue;
     vector<Packet> packets_to_sync_queue;
 
-    while (client_sock > 0)
+    while (true)
     {
         if (type != "-b")
         {
@@ -714,7 +714,7 @@ void Server::handle_communication(int client_sock)
 {
     std::cout << "entrei handle_communication" << std::endl;
 
-    if (client_sock > 0)
+    if (true)
     {
         // Codigo para deixar não bloqeante entre recv e send
         //  ===================================================================
@@ -826,7 +826,7 @@ void Server::handle_commands(int &client_sock, string &new_folder_name, Threads:
     std::cout << "A thread para lidar com comandos no servidor está executando." << std::endl;
     string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
-    while (client_sock > 0)
+    while (true)
     {
         auto packets = received_queue.consume_blocking();
         packets[0].clean_payload();
@@ -903,7 +903,7 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
     std::cout << "folder_name: " << new_folder_name << std::endl;
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
 
-    while (client_sock > 0)
+    while (true)
     {
         auto packets = sync_queue.consume_blocking();
         packets[0].clean_payload();
