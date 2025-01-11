@@ -205,28 +205,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                 {
                     std::cout << "Sou um backup" << endl;
 
-                    // std::cout << "VOU DAR SLEEP" << std::endl;
-                
-                    // sleep(5);
-
-                    // std::cout << "DEI O SLEEP" << std::endl;
-
-                    // int recebido_betinha = 0;
-                    // char buffer_betinha[3];
-
-                    // while (recebido_betinha == 0)
-                    // {
-                    //     std::cout << "dentro do while do recebido_betinha" << std::endl;
-                    //     recebido_betinha = recv(bully_curr_sock, buffer_betinha, 3, 0);
-                    // }
-
-                    // cout << "recebido segundo ok: " << endl;
-                    // for (auto c : buffer_betinha)
-                    // {
-                    //     std::cout << c;
-                    // }
-
-                    std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
+                    // std::thread betinha(&Server::handle_communication, this, this->new_backup_sock);
                     std::thread maintain_connection(&Server::heartbeat, this, this->new_backup_sock);
                     maintain_connection.join();
                     bully_mutex.lock();
@@ -246,7 +225,7 @@ void Server::connect_server(string main_ip_address, string main_port)
                         connecting_to_clients.join();
                     }
 
-                    betinha.join();
+                    // betinha.join();
                 }
 
                 else
