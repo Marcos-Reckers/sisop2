@@ -637,50 +637,28 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             cout << "pacote recebido: ";
             received_packet.print();
             cout << endl;
-
-
             if (received_packet.get_type() == 1)
             {
-                std::cout << "COMPARAÇÃO: " << packets_to_recv_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
-                if (received_packet.get_total_packets() == 1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
-                    std::cout << "sou um pacote solteiro e vou ser enviado" << std::endl;
                     packets_to_recv_queue.push_back(received_packet);
                     received_queue.produce(packets_to_recv_queue);
                     packets_to_recv_queue.clear();
                 }
-                else if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
-                {
-                    packets_to_recv_queue.push_back(received_packet);
-
-                    sort_packets(packets_to_recv_queue);
-                    sync_queue.produce(packets_to_recv_queue);
-                    packets_to_recv_queue.clear();
-                }
-                else if (packets_to_recv_queue.size() < received_packet.get_total_packets()-1)
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_recv_queue.push_back(received_packet);
                 }
             }
             else if (received_packet.get_type() == 2)
             {
-                std::cout << "COMPARAÇÃO: " << packets_to_sync_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
-                if (received_packet.get_total_packets() == 1)
-                {
-                    std::cout << "sou um pacote solteiro e vou ser enviado" << std::endl;
-                    packets_to_sync_queue.push_back(received_packet);
-                    received_queue.produce(packets_to_sync_queue);
-                    packets_to_sync_queue.clear();
-                }
-                else if (packets_to_sync_queue.size() == received_packet.get_total_packets()-1)
+                if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
-
-                    sort_packets(packets_to_sync_queue);
                     sync_queue.produce(packets_to_sync_queue);
                     packets_to_sync_queue.clear();
                 }
-                else if (packets_to_sync_queue.size() < received_packet.get_total_packets()-1)
+                else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
                     packets_to_sync_queue.push_back(received_packet);
                 }
