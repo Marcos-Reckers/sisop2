@@ -677,7 +677,14 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             else if (received_packet.get_type() == 2)
             {
                 std::cout << "COMPARAÇÃO: " << packets_to_recv_queue.size() << " == " << received_packet.get_total_packets()-1 << std::endl;
-                if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
+                if (received_packet.get_total_packets() == 1)
+                {
+                    std::cout << "sou um pacote solteiro e vou ser enviado" << std::endl;
+                    packets_to_recv_queue.push_back(received_packet);
+                    received_queue.produce(packets_to_recv_queue);
+                    packets_to_recv_queue.clear();
+                }
+                else if (packets_to_recv_queue.size() == received_packet.get_total_packets()-1)
                 {
                     packets_to_recv_queue.push_back(received_packet);
 
