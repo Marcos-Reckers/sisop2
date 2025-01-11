@@ -930,7 +930,7 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
             string cmd = packets[0].get_payload_as_string();
             cout << "COMANDO : " << cmd << endl;
 
-            if (cmd == "upload_sync")
+            if (cmd == "upload_sync"  || cmd == "upload_broadcast")
             {
                 cout << "RECEBI UM UPLOAD_SYNC NA PASTA: " << new_folder_name << endl;
                 string file_name = FileInfo::receive_file(packets, new_folder_name);
