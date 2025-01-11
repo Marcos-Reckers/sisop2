@@ -192,7 +192,6 @@ void Server::connect_server(string main_ip_address, string main_port)
                 thread maintain_connection(&Server::heartbeat, this, bully_curr_sock);
 
                 thread backup_communication(&Server::handle_communication, this, bully_curr_sock);
-
                 maintain_connection.join();
 
                 bully_mutex.lock();
