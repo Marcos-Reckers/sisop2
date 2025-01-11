@@ -660,7 +660,6 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             received_packet.print();
             cout << endl;
 
-            std::cout << "MEU TIPO É: " << received_packet.get_type() << std::endl;
 
             if (received_packet.get_type() == 1)
             {
@@ -677,18 +676,14 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             }
             else if (received_packet.get_type() == 2)
             {
-                cout << "RECEBI UM PACOTE DO TIPO 2" << endl;
                 if (received_packet.get_seqn() == received_packet.get_total_packets())
                 {
-                    cout<<"RECEBI TODOS OS PACOTES"<<endl;
                     packets_to_sync_queue.push_back(received_packet);
                     sync_queue.produce(packets_to_sync_queue);
-                    cout<<"PRODUZI NA SYNC QUEUE"<<endl;
                     packets_to_sync_queue.clear();
                 }
                 else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
-                    cout<<"RECEBI UM PACOTE MAS NAO TODOS sqn: " << received_packet.get_seqn()<<endl;
                     packets_to_sync_queue.push_back(received_packet);
                 }
             }
@@ -926,17 +921,13 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
         packets[0].clean_payload();
         if (packets[0].get_type() == 2)
         {
-            cout << "RRECEBI UM PACOTE DO TIPO 2 TENHO Q MONTAR" << endl;
             string cmd = packets[0].get_payload_as_string();
-            cout << "COMANDO : " << cmd << endl;
 
             if (cmd == "upload_sync"  || cmd == "upload_broadcast")
             {
-                cout << "RECEBI UM UPLOAD_SYNC NA PASTA: " << new_folder_name << endl;
                 string file_name = FileInfo::receive_file(packets, new_folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
                 string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
-                cout << "Arquivo pronto para envio via upload_broadcast: " << file_path << endl;
 
                 if (this->type == "-p")
                 {
@@ -1338,33 +1329,3 @@ void Server::send_username(int client_sock, int socket)
         std::cout << "Enviado pacote " << pkt.get_seqn() << "/" << pkt.get_total_packets() << " de tamanho: " << sent_bytes << " via broadcast" << std::endl;
     }
 }
-
-
-
-
-
-
-
-// client.addr.sin_port = htons(atoi("8081"));
-//             // Tenta conectar ao servidor por 100 segundos
-//             attempts = 0;
-//             while (attempts < 10)
-//             {
-//                 if (connect(client_sock, (struct sockaddr *)&client.addr, sizeof(client.addr)) == 0)
-//                 {
-//                     std::cout << "Conexão estabelecida com o cliente " << client.username << std::endl;
-
-//                     client.sock = client_sock;
-
-//                     addClient(client_sock, client.username);
-
-//                     client_threads.emplace_back(&Server::handle_communication, this, client_sock);
-//                     attempts = 10;
-//                 }
-//                 else
-//                 {
-//                     cout << "Tentativa de conexão falhou, tentando novamente..." << endl;
-//                     sleep(1); // Aguarda 1 segundo antes de tentar novamente
-//                     attempts++;
-//                 }
-//             }
