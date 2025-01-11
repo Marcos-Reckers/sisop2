@@ -47,14 +47,22 @@ void FileInfo::create_dir(string dir_name)
 
 string FileInfo::receive_file(std::vector<Packet> packets, string dst_folder)
 {
+    std::cout << "entrei receive_file com upload_sync na handle_sync" << std::endl;
+    std::cout << "dst_folder: " << dst_folder << std::endl;
     FileInfo::create_dir(dst_folder);
+    std::cout << "criei a pasta" << std::endl;
+
     FileInfo file_info = receive_file_info(packets);
+    std::cout << "recebi o file info" << std::endl;
 
     file_info.print();
 
     std::string exec_path = std::filesystem::canonical("/proc/self/exe").parent_path().string();
     string file_name = file_info.get_file_name();
     std::string save_path = exec_path + "/" + dst_folder + "/" + file_name;
+
+    std::cout << "Salvando arquivo em: " << save_path << std::endl;
+
     std::ofstream outfile(save_path, std::ios::binary);
     if (!outfile.is_open())
     {

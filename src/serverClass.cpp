@@ -926,13 +926,17 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
         packets[0].clean_payload();
         if (packets[0].get_type() == 2)
         {
+            cout << "RRECEBI UM PACOTE DO TIPO 2 TENHO Q MONTAR" << endl;
             string cmd = packets[0].get_payload_as_string();
+            cout << "COMANDO : " << cmd << endl;
 
             if (cmd == "upload_sync")
             {
+                cout << "RECEBI UM UPLOAD_SYNC NA PASTA: " << new_folder_name << endl;
                 string file_name = FileInfo::receive_file(packets, new_folder_name);
                 std::cout << "Arquivo recebido: " << file_name << std::endl;
                 string file_path = exec_path + "/" + new_folder_name + "/" + file_name;
+                cout << "Arquivo pronto para envio via upload_broadcast: " << file_path << endl;
 
                 if (this->type == "-p")
                 {
