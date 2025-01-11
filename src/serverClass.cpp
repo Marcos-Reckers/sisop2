@@ -659,6 +659,9 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             cout << "pacote recebido: ";
             received_packet.print();
             cout << endl;
+
+            std::cout << "MEU TIPO É: " << received_packet.get_type() << std::endl;
+
             if (received_packet.get_type() == 1)
             {
                 if (received_packet.get_seqn() == received_packet.get_total_packets())
@@ -685,6 +688,7 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
                 }
                 else if (received_packet.get_seqn() < received_packet.get_total_packets())
                 {
+                    cout<<"RECEBI UM PACOTE MAS NAO TODOS sqn: " << received_packet.get_seqn()<<endl;
                     packets_to_sync_queue.push_back(received_packet);
                 }
             }
