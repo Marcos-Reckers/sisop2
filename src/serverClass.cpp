@@ -696,6 +696,8 @@ void Server::handle_io(int &client_sock, Threads::AtomicQueue<std::vector<Packet
             }
         }
     }
+
+    std::cout << "Saindo do handle_io" << std::endl;
 }
 
 void Server::handle_communication(int client_sock)
@@ -869,6 +871,7 @@ void Server::handle_commands(int &client_sock, string &new_folder_name, Threads:
             }
         }
     }
+    std::cout << "Saindo do handle_commands" << std::endl;
 }
 
 void Server::create_sync_dir(int client_fd)
@@ -967,6 +970,7 @@ void Server::handle_sync(int &client_sock, std::string &new_folder_name, Threads
             }
         }
     }
+    std::cout << "Saindo do handle_sync" << std::endl;
 }
 
 // Método que adiciona o cliente ao map
